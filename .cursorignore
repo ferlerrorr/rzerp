@@ -1,0 +1,3 @@
+# Allow .env file to be accessible in Cursor
+!.env
+
