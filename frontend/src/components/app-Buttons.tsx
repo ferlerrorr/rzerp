@@ -12,6 +12,14 @@ interface AppButtonsProps {
   newJournalEntry?: boolean;
   createBudget?: boolean;
   createInvoice?: boolean;
+  addProduct?: boolean;
+  newAdjustment?: boolean;
+  addWarehouse?: boolean;
+  createPO?: boolean;
+  addVendor?: boolean;
+  addUser?: boolean;
+  addRole?: boolean;
+  exportLogs?: boolean;
   filterLabel?: string;
   addLabel?: string;
   leaveRequestLabel?: string;
@@ -21,6 +29,14 @@ interface AppButtonsProps {
   newJournalEntryLabel?: string;
   createBudgetLabel?: string;
   createInvoiceLabel?: string;
+  addProductLabel?: string;
+  newAdjustmentLabel?: string;
+  addWarehouseLabel?: string;
+  createPOLabel?: string;
+  addVendorLabel?: string;
+  addUserLabel?: string;
+  addRoleLabel?: string;
+  exportLogsLabel?: string;
   filterOrder?: number;
   addOrder?: number;
   leaveRequestOrder?: number;
@@ -30,6 +46,14 @@ interface AppButtonsProps {
   newJournalEntryOrder?: number;
   createBudgetOrder?: number;
   createInvoiceOrder?: number;
+  addProductOrder?: number;
+  newAdjustmentOrder?: number;
+  addWarehouseOrder?: number;
+  createPOOrder?: number;
+  addVendorOrder?: number;
+  addUserOrder?: number;
+  addRoleOrder?: number;
+  exportLogsOrder?: number;
   onFilterClick?: () => void;
   onAddClick?: () => void;
   onLeaveRequestClick?: () => void;
@@ -39,6 +63,14 @@ interface AppButtonsProps {
   onNewJournalEntryClick?: () => void;
   onCreateBudgetClick?: () => void;
   onCreateInvoiceClick?: () => void;
+  onAddProductClick?: () => void;
+  onNewAdjustmentClick?: () => void;
+  onAddWarehouseClick?: () => void;
+  onCreatePOClick?: () => void;
+  onAddVendorClick?: () => void;
+  onAddUserClick?: () => void;
+  onAddRoleClick?: () => void;
+  onExportLogsClick?: () => void;
   className?: string;
 }
 
@@ -52,6 +84,14 @@ export function AppButtons({
   newJournalEntry = false,
   createBudget = false,
   createInvoice = false,
+  addProduct = false,
+  newAdjustment = false,
+  addWarehouse = false,
+  createPO = false,
+  addVendor = false,
+  addUser = false,
+  addRole = false,
+  exportLogs = false,
   filterLabel = "Filter",
   addLabel = "Add Employee",
   leaveRequestLabel = "File Leave Request",
@@ -61,6 +101,14 @@ export function AppButtons({
   newJournalEntryLabel = "New Journal Entry",
   createBudgetLabel = "Create Budget",
   createInvoiceLabel = "Create Invoice",
+  addProductLabel = "Add Product",
+  newAdjustmentLabel = "New Adjustment",
+  addWarehouseLabel = "Add Warehouse",
+  createPOLabel = "Create PO",
+  addVendorLabel = "Add Vendor",
+  addUserLabel = "Add User",
+  addRoleLabel = "Add Role",
+  exportLogsLabel = "Export Logs",
   filterOrder = 2,
   addOrder = 1,
   leaveRequestOrder = 3,
@@ -70,6 +118,14 @@ export function AppButtons({
   newJournalEntryOrder = 7,
   createBudgetOrder = 8,
   createInvoiceOrder = 9,
+  addProductOrder = 10,
+  newAdjustmentOrder = 1,
+  addWarehouseOrder = 11,
+  createPOOrder = 12,
+  addVendorOrder = 13,
+  addUserOrder = 14,
+  addRoleOrder = 15,
+  exportLogsOrder = 16,
   onFilterClick,
   onAddClick,
   onLeaveRequestClick,
@@ -79,6 +135,14 @@ export function AppButtons({
   onNewJournalEntryClick,
   onCreateBudgetClick,
   onCreateInvoiceClick,
+  onAddProductClick,
+  onNewAdjustmentClick,
+  onAddWarehouseClick,
+  onCreatePOClick,
+  onAddVendorClick,
+  onAddUserClick,
+  onAddRoleClick,
+  onExportLogsClick,
   className,
 }: AppButtonsProps) {
   const buttons = [];
@@ -179,6 +243,94 @@ export function AppButtons({
       variant: "default" as ButtonProps["variant"],
       onClick: onCreateInvoiceClick,
       order: createInvoiceOrder,
+    });
+  }
+
+  if (addProduct) {
+    buttons.push({
+      id: "addProduct",
+      label: addProductLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onAddProductClick,
+      order: addProductOrder,
+    });
+  }
+
+  if (newAdjustment) {
+    buttons.push({
+      id: "newAdjustment",
+      label: newAdjustmentLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onNewAdjustmentClick,
+      order: newAdjustmentOrder,
+    });
+  }
+
+  if (addWarehouse) {
+    buttons.push({
+      id: "addWarehouse",
+      label: addWarehouseLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onAddWarehouseClick,
+      order: addWarehouseOrder,
+    });
+  }
+
+  if (createPO) {
+    buttons.push({
+      id: "createPO",
+      label: createPOLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onCreatePOClick,
+      order: createPOOrder,
+    });
+  }
+
+  if (addVendor) {
+    buttons.push({
+      id: "addVendor",
+      label: addVendorLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onAddVendorClick,
+      order: addVendorOrder,
+    });
+  }
+
+  if (addUser) {
+    buttons.push({
+      id: "addUser",
+      label: addUserLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onAddUserClick,
+      order: addUserOrder,
+    });
+  }
+
+  if (addRole) {
+    buttons.push({
+      id: "addRole",
+      label: addRoleLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onAddRoleClick,
+      order: addRoleOrder,
+    });
+  }
+
+  if (exportLogs) {
+    buttons.push({
+      id: "exportLogs",
+      label: exportLogsLabel,
+      icon: Plus,
+      variant: "default" as ButtonProps["variant"],
+      onClick: onExportLogsClick,
+      order: exportLogsOrder,
     });
   }
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AccessControlPage } from "@/pages/access-control";
+import { AccessControlPage } from "@/pages/accessControl/access-control";
 import { requireAuth } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/access-control")({
@@ -8,4 +8,3 @@ export const Route = createFileRoute("/access-control")({
   },
   component: AccessControlPage,
 });
-
