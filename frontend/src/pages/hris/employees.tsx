@@ -256,7 +256,7 @@ const employeeActions: ActionItem<Employee>[] = [
 
 export function EmployeesTab() {
   return (
-    <div className="flex flex-col gap-8 px-2 sm:px-4 md:px-6">
+    <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
       {/* Top section: Search and Buttons - Responsive layout */}
       <div className="flex flex-row sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mt-4">
         {/* Left side: Search and Filter */}

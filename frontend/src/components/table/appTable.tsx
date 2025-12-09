@@ -4,6 +4,7 @@ import {
   TableBody,
   TableCaption,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -48,6 +49,11 @@ export interface ActionItem<T> {
   variant?: "default" | "destructive";
 }
 
+export interface FooterRow {
+  cells: (ReactNode | string)[];
+  className?: string;
+}
+
 export interface AppTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
@@ -56,6 +62,7 @@ export interface AppTableProps<T> {
   caption?: string;
   minWidth?: string;
   getRowId?: (row: T) => string | number;
+  footer?: FooterRow;
 }
 
 export function AppTable<T extends Record<string, any>>({
@@ -66,6 +73,7 @@ export function AppTable<T extends Record<string, any>>({
   caption,
   minWidth = "800px",
   getRowId,
+  footer,
 }: AppTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -114,7 +122,7 @@ export function AppTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className="space-y-4 border border-gray-200 rounded-3xl pb-2">
+    <div className="space-y-4 rounded-3xl pb-2">
       <div className="w-full -mx-2 sm:mx-0 ">
         <div
           className="overflow-x-auto px-2 sm:px-0 scrollbar-thin"
@@ -209,6 +217,37 @@ export function AppTable<T extends Record<string, any>>({
                     </TableRow>
                   ))}
                 </TableBody>
+                {footer && (
+                  <TableFooter>
+                    <TableRow
+                      className={`bg-muted/50 hover:bg-muted/50 ${
+                        footer.className || ""
+                      }`}
+                    >
+                      {columns.map((column, colIndex) => {
+                        const cellContent = footer.cells[colIndex] ?? "";
+                        return (
+                          <TableCell
+                            key={colIndex}
+                            className={`text-xs sm:text-sm whitespace-nowrap py-1.5 px-2.5 font-semibold ${
+                              column.className || ""
+                            }`}
+                            style={
+                              column.width ? { width: column.width } : undefined
+                            }
+                          >
+                            {cellContent}
+                          </TableCell>
+                        );
+                      })}
+                      {actions && actions.length > 0 && (
+                        <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
+                          {/* Empty cell for actions column */}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>

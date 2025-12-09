@@ -97,6 +97,11 @@ const performanceReviews: PerformanceReview[] = [
 export function PerformanceTab() {
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
+      <div className="flex flex-row justify-between items-center">
+        <h1 className="text-base font-semibold text-gray-900">
+          Performance Management
+        </h1>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {performanceCardConfig.map((card) => (
           <SimpleCard

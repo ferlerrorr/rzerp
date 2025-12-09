@@ -151,6 +151,60 @@ const balanceSheetSections = [
   },
 ];
 
+// Financial Metrics Data
+interface FinancialMetricsData {
+  current_ratio: string;
+  profit_margin: string;
+  gross_margin: string;
+  roe: string;
+}
+
+interface FinancialMetricsConfig {
+  title: string;
+  dataKey: keyof FinancialMetricsData;
+  subtitle: string;
+  countColor: "default" | "green" | "blue" | "black" | "orange" | "red";
+  bgColor: string;
+}
+
+const financialMetricsData: FinancialMetricsData = {
+  current_ratio: "2.91",
+  profit_margin: "41.3%",
+  gross_margin: "65.0%",
+  roe: "115.7%",
+};
+
+const financialMetricsConfig: FinancialMetricsConfig[] = [
+  {
+    title: "Current Ratio",
+    dataKey: "current_ratio",
+    subtitle: "Assets / Liabilities",
+    countColor: "black",
+    bgColor: "bg-blue-50/50 border-0",
+  },
+  {
+    title: "Profit Margin",
+    dataKey: "profit_margin",
+    subtitle: "Net Income / Revenue",
+    countColor: "black",
+    bgColor: "bg-green-50/50 border-0",
+  },
+  {
+    title: "Gross Margin",
+    dataKey: "gross_margin",
+    subtitle: "Gross Profit / Revenue",
+    countColor: "black",
+    bgColor: "bg-purple-50/50 border-0",
+  },
+  {
+    title: "ROE",
+    dataKey: "roe",
+    subtitle: "Return on Equity",
+    countColor: "black",
+    bgColor: "bg-orange-50/50 border-0",
+  },
+];
+
 export function OverviewTab() {
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
@@ -170,6 +224,21 @@ export function OverviewTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4">
         <IncomeStatement items={incomeStatementItems} />
         <BalanceSheet sections={balanceSheetSections} />
+      </div>
+      <div className="w-full rounded-3xl p-4 border border-gray-200">
+        <h1 className="text-base font-semibold">Key Financial Ratios</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-4">
+          {financialMetricsConfig.map((metric) => (
+            <SimpleCard
+              key={metric.dataKey}
+              title={metric.title}
+              count={financialMetricsData[metric.dataKey]}
+              subtitle={metric.subtitle}
+              countColor={metric.countColor}
+              className={metric.bgColor}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

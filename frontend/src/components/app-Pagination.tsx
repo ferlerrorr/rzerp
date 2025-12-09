@@ -91,7 +91,7 @@ export function AppPagination({
 
   return (
     <Pagination className={className}>
-      <PaginationContent className="gap-0.5 sm:gap-1">
+      <PaginationContent className="gap-0.5">
         <PaginationItem>
           <PaginationPrevious
             href="#"
@@ -100,7 +100,7 @@ export function AppPagination({
               currentPage === 1
                 ? "pointer-events-none opacity-50"
                 : "cursor-pointer",
-              "h-8 sm:h-10 px-2 sm:px-2.5 text-xs sm:text-sm [&>span]:hidden [&>span]:sm:inline [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:sm:h-4 [&>svg]:sm:w-4"
+              "h-7 px-2 text-xs [&>span]:hidden [&>span]:sm:inline [&>svg]:h-3.5 [&>svg]:w-3.5"
             )}
           />
         </PaginationItem>
@@ -108,7 +108,7 @@ export function AppPagination({
           if (page === "ellipsis") {
             return (
               <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis className="h-8 w-8 sm:h-9 sm:w-9" />
+                <PaginationEllipsis className="h-7 w-7" />
               </PaginationItem>
             );
           }
@@ -120,7 +120,7 @@ export function AppPagination({
                 isActive={currentPage === page}
                 size="icon"
                 className={cn(
-                  "cursor-pointer h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"
+                  "cursor-pointer h-7 w-7 text-xs"
                 )}
               >
                 {page}
@@ -136,7 +136,7 @@ export function AppPagination({
               currentPage === totalPages
                 ? "pointer-events-none opacity-50"
                 : "cursor-pointer",
-              "h-8 sm:h-10 px-2 sm:px-2.5 text-xs sm:text-sm [&>span]:hidden [&>span]:sm:inline [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:sm:h-4 [&>svg]:sm:w-4"
+              "h-7 px-2 text-xs [&>span]:hidden [&>span]:sm:inline [&>svg]:h-3.5 [&>svg]:w-3.5"
             )}
           />
         </PaginationItem>

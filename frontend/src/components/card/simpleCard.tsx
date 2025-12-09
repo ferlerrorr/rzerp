@@ -9,7 +9,14 @@ interface SimpleCardProps {
   iconImage?: string;
   iconSize?: "sm" | "md" | "lg";
   subtitle?: string;
-  countColor?: "default" | "green" | "blue" | "black" | "orange" | "red";
+  countColor?:
+    | "default"
+    | "green"
+    | "blue"
+    | "black"
+    | "orange"
+    | "red"
+    | "purple";
   iconBgColor?:
     | "blue"
     | "green"
@@ -21,6 +28,7 @@ interface SimpleCardProps {
     | "yellow"
     | "gray"
     | "red";
+  className?: string;
 }
 
 const countColorClasses = {
@@ -30,6 +38,7 @@ const countColorClasses = {
   black: "text-black",
   orange: "text-orange-600",
   red: "text-red-600",
+  purple: "text-purple-600",
 };
 
 const iconBgColors = {
@@ -73,11 +82,19 @@ export function SimpleCard({
   subtitle,
   countColor = "default",
   iconBgColor = "gray",
+  className,
 }: SimpleCardProps) {
+  const hasIcon = Icon || iconImage;
+
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-sm text-gray-500 font-semibold flex items-center justify-between">
+        <CardTitle
+          className={cn(
+            "text-sm text-gray-500 font-semibold",
+            hasIcon ? "flex items-center justify-between" : ""
+          )}
+        >
           {title}
           {iconImage && (
             <img
@@ -101,7 +118,7 @@ export function SimpleCard({
 
         <span
           className={cn(
-            "text-xl font-bold mt-1",
+            "text-xl text-gray-900 font-semibold mt-1",
             countColorClasses[countColor]
           )}
         >

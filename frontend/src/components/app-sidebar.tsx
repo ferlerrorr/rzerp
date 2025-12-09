@@ -99,8 +99,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       };
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar 
+      collapsible="icon" 
+      className="!border-0 !border-r-0 !border-l-0 [&>div[data-sidebar='sidebar']]:!bg-white"
+      {...props}
+    >
+      <SidebarHeader className="bg-white">
         <div className="flex items-center gap-2  py-2">
           <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Building2 className="size-4" />
@@ -113,10 +117,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="bg-white">
         <NavMain items={navMain} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="bg-white">
         <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
