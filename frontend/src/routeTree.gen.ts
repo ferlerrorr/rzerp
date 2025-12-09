@@ -9,13 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PurchaseOrderRouteImport } from './routes/purchase-order'
+import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as HrisRouteImport } from './routes/hris'
+import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AccountReceivableRouteImport } from './routes/account-receivable'
+import { Route as AccountPayableRouteImport } from './routes/account-payable'
+import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 
+const VendorsRoute = VendorsRouteImport.update({
+  id: '/vendors',
+  path: '/vendors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -26,14 +38,44 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PurchaseOrderRoute = PurchaseOrderRouteImport.update({
+  id: '/purchase-order',
+  path: '/purchase-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HrisRoute = HrisRouteImport.update({
   id: '/hris',
   path: '/hris',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountReceivableRoute = AccountReceivableRouteImport.update({
+  id: '/account-receivable',
+  path: '/account-receivable',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountPayableRoute = AccountPayableRouteImport.update({
+  id: '/account-payable',
+  path: '/account-payable',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessControlRoute = AccessControlRouteImport.update({
+  id: '/access-control',
+  path: '/access-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,61 +91,123 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
+  '/account-payable': typeof AccountPayableRoute
+  '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
+  '/finance': typeof FinanceRoute
   '/hris': typeof HrisRoute
+  '/inventory': typeof InventoryRoute
+  '/purchase-order': typeof PurchaseOrderRoute
   '/settings': typeof SettingsRoute
   '/users': typeof UsersRoute
+  '/vendors': typeof VendorsRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
+  '/account-payable': typeof AccountPayableRoute
+  '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
+  '/finance': typeof FinanceRoute
   '/hris': typeof HrisRoute
+  '/inventory': typeof InventoryRoute
+  '/purchase-order': typeof PurchaseOrderRoute
   '/settings': typeof SettingsRoute
   '/users': typeof UsersRoute
+  '/vendors': typeof VendorsRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
+  '/account-payable': typeof AccountPayableRoute
+  '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
+  '/finance': typeof FinanceRoute
   '/hris': typeof HrisRoute
+  '/inventory': typeof InventoryRoute
+  '/purchase-order': typeof PurchaseOrderRoute
   '/settings': typeof SettingsRoute
   '/users': typeof UsersRoute
+  '/vendors': typeof VendorsRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/access-control'
+    | '/account-payable'
+    | '/account-receivable'
     | '/dashboard'
+    | '/finance'
     | '/hris'
+    | '/inventory'
+    | '/purchase-order'
     | '/settings'
     | '/users'
+    | '/vendors'
     | '/auth/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/hris' | '/settings' | '/users' | '/auth/login'
+  to:
+    | '/'
+    | '/access-control'
+    | '/account-payable'
+    | '/account-receivable'
+    | '/dashboard'
+    | '/finance'
+    | '/hris'
+    | '/inventory'
+    | '/purchase-order'
+    | '/settings'
+    | '/users'
+    | '/vendors'
+    | '/auth/login'
   id:
     | '__root__'
     | '/'
+    | '/access-control'
+    | '/account-payable'
+    | '/account-receivable'
     | '/dashboard'
+    | '/finance'
     | '/hris'
+    | '/inventory'
+    | '/purchase-order'
     | '/settings'
     | '/users'
+    | '/vendors'
     | '/auth/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccessControlRoute: typeof AccessControlRoute
+  AccountPayableRoute: typeof AccountPayableRoute
+  AccountReceivableRoute: typeof AccountReceivableRoute
   DashboardRoute: typeof DashboardRoute
+  FinanceRoute: typeof FinanceRoute
   HrisRoute: typeof HrisRoute
+  InventoryRoute: typeof InventoryRoute
+  PurchaseOrderRoute: typeof PurchaseOrderRoute
   SettingsRoute: typeof SettingsRoute
   UsersRoute: typeof UsersRoute
+  VendorsRoute: typeof VendorsRoute
   AuthLoginRoute: typeof AuthLoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vendors': {
+      id: '/vendors'
+      path: '/vendors'
+      fullPath: '/vendors'
+      preLoaderRoute: typeof VendorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -118,6 +222,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/purchase-order': {
+      id: '/purchase-order'
+      path: '/purchase-order'
+      fullPath: '/purchase-order'
+      preLoaderRoute: typeof PurchaseOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hris': {
       id: '/hris'
       path: '/hris'
@@ -125,11 +243,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HrisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-receivable': {
+      id: '/account-receivable'
+      path: '/account-receivable'
+      fullPath: '/account-receivable'
+      preLoaderRoute: typeof AccountReceivableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-payable': {
+      id: '/account-payable'
+      path: '/account-payable'
+      fullPath: '/account-payable'
+      preLoaderRoute: typeof AccountPayableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/access-control': {
+      id: '/access-control'
+      path: '/access-control'
+      fullPath: '/access-control'
+      preLoaderRoute: typeof AccessControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -151,10 +297,17 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccessControlRoute: AccessControlRoute,
+  AccountPayableRoute: AccountPayableRoute,
+  AccountReceivableRoute: AccountReceivableRoute,
   DashboardRoute: DashboardRoute,
+  FinanceRoute: FinanceRoute,
   HrisRoute: HrisRoute,
+  InventoryRoute: InventoryRoute,
+  PurchaseOrderRoute: PurchaseOrderRoute,
   SettingsRoute: SettingsRoute,
   UsersRoute: UsersRoute,
+  VendorsRoute: VendorsRoute,
   AuthLoginRoute: AuthLoginRoute,
 }
 export const routeTree = rootRouteImport

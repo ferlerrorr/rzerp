@@ -1,9 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuthStore } from "../stores/auth";
-import { MainContent, Section, PageLayout, Heading, Form, FormGroup, FormActions } from "../components/semantic/index";
+import {
+  MainContent,
+  Section,
+  PageLayout,
+  Heading,
+  Form,
+  FormGroup,
+  FormActions,
+} from "../components/semantic/index";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/Input";
+import { Input } from "../components/ui/input";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -32,8 +40,14 @@ function LoginPage() {
           <Form onSubmit={handleSubmit}>
             {error && <div className="error-message">{error}</div>}
             <FormGroup>
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-medium mb-2"
+              >
+                Email
+              </label>
               <Input
-                label="Email"
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -41,8 +55,14 @@ function LoginPage() {
               />
             </FormGroup>
             <FormGroup>
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium mb-2"
+              >
+                Password
+              </label>
               <Input
-                label="Password"
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -64,4 +84,3 @@ function LoginPage() {
 export const Route = createFileRoute("/auth/login")({
   component: LoginPage,
 });
-
