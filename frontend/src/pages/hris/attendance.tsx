@@ -208,16 +208,12 @@ const dtrColumns: ColumnDef<DailyTimeRecord>[] = [
   {
     header: "Status",
     accessor: "status",
-    cell: (row) => {
-      const statusColors: Record<string, string> = {
-        Present: "text-green-600",
-        Late: "text-orange-600",
-        Absent: "text-red-600",
-        "On Leave": "text-amber-700",
-      };
-      return (
-        <span className={statusColors[row.status] || ""}>{row.status}</span>
-      );
+    useBadge: true,
+    badgeVariantMap: {
+      Present: "success",
+      Late: "warning",
+      Absent: "error",
+      "On Leave": "pending",
     },
     className: "text-center",
     headerClassName: "text-center",

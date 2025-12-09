@@ -25,6 +25,16 @@ interface CardConfig {
   dataKey: keyof EmployeesData;
   icon: LucideIcon;
   countColor: "default" | "green" | "blue" | "black";
+  iconBgColor:
+    | "blue"
+    | "green"
+    | "purple"
+    | "orange"
+    | "pink"
+    | "indigo"
+    | "teal"
+    | "yellow"
+    | "gray";
 }
 
 // Sample data - This would typically come from an API/database
@@ -42,24 +52,28 @@ const cardConfig: CardConfig[] = [
     dataKey: "total_employees",
     icon: UsersRound,
     countColor: "default",
+    iconBgColor: "blue",
   },
   {
     title: "Active",
     dataKey: "active_employees",
     icon: UserCheck,
     countColor: "green",
+    iconBgColor: "green",
   },
   {
     title: "New this month",
     dataKey: "new_this_month",
     icon: UserPlus,
     countColor: "blue",
+    iconBgColor: "purple",
   },
   {
     title: "Department",
     dataKey: "total_departments",
     icon: Building2,
     countColor: "black",
+    iconBgColor: "indigo",
   },
 ];
 
@@ -200,6 +214,14 @@ const employeeColumns: ColumnDef<Employee>[] = [
   {
     header: "Status",
     accessor: "status",
+    useBadge: true,
+    badgeVariantMap: {
+      Active: "success",
+      Inactive: "warning",
+      Terminated: "error",
+    },
+    className: "text-center",
+    headerClassName: "text-center",
   },
 ];
 
@@ -259,6 +281,7 @@ export function EmployeesTab() {
             count={employeesData[card.dataKey]}
             icon={card.icon}
             countColor={card.countColor}
+            iconBgColor={card.iconBgColor}
           />
         ))}
       </div>

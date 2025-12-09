@@ -5,8 +5,22 @@ import { cn } from "@/lib/utils";
 interface SimpleCardProps {
   title: string;
   count: string | number;
-  icon: LucideIcon;
-  countColor?: "default" | "green" | "blue" | "black";
+  icon?: LucideIcon;
+  iconImage?: string;
+  iconSize?: "sm" | "md" | "lg";
+  subtitle?: string;
+  countColor?: "default" | "green" | "blue" | "black" | "orange" | "red";
+  iconBgColor?:
+    | "blue"
+    | "green"
+    | "purple"
+    | "orange"
+    | "pink"
+    | "indigo"
+    | "teal"
+    | "yellow"
+    | "gray"
+    | "red";
 }
 
 const countColorClasses = {
@@ -14,30 +28,89 @@ const countColorClasses = {
   green: "text-green-600",
   blue: "text-blue-600",
   black: "text-black",
+  orange: "text-orange-600",
+  red: "text-red-600",
+};
+
+const iconBgColors = {
+  blue: "bg-blue-100",
+  green: "bg-green-100",
+  purple: "bg-purple-100",
+  orange: "bg-orange-100",
+  pink: "bg-pink-100",
+  indigo: "bg-indigo-100",
+  teal: "bg-teal-100",
+  yellow: "bg-yellow-100",
+  gray: "bg-gray-100",
+  red: "bg-red-100",
+};
+
+const iconColors = {
+  blue: "text-blue-600",
+  green: "text-green-600",
+  purple: "text-purple-600",
+  orange: "text-orange-600",
+  pink: "text-pink-600",
+  indigo: "text-indigo-600",
+  teal: "text-teal-600",
+  yellow: "text-yellow-600",
+  gray: "text-gray-600",
+  red: "text-red-600",
+};
+
+const iconSizeClasses = {
+  sm: "h-6 w-6",
+  md: "h-8 w-8",
+  lg: "h-12 w-12",
 };
 
 export function SimpleCard({
   title,
   count,
   icon: Icon,
+  iconImage,
+  iconSize = "md",
+  subtitle,
   countColor = "default",
+  iconBgColor = "gray",
 }: SimpleCardProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-sm text-gray-500 font-semibold flex items-center justify-between">
           {title}
-          <Icon className="w-6 h-6 text-gray-500 fill-gray-500" />
+          {iconImage && (
+            <img
+              src={iconImage}
+              alt={title}
+              className={cn("object-contain", iconSizeClasses[iconSize])}
+              aria-hidden="true"
+            />
+          )}
+          {Icon && !iconImage && (
+            <Icon
+              className={cn(
+                "h-8 w-8 rounded-full p-1.5 transition-all duration-200",
+                iconBgColors[iconBgColor],
+                iconColors[iconBgColor]
+              )}
+              aria-hidden="true"
+            />
+          )}
         </CardTitle>
 
         <span
           className={cn(
-            "text-lg font-semibold mt-1",
+            "text-xl font-bold mt-1",
             countColorClasses[countColor]
           )}
         >
           {count}
         </span>
+
+        {subtitle && (
+          <span className="text-sm text-gray-500 mt-1">{subtitle}</span>
+        )}
       </CardHeader>
     </Card>
   );

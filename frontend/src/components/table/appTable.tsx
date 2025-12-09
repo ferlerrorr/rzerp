@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MoreVertical, LucideIcon } from "lucide-react";
 import { AppPagination } from "@/components/app-Pagination";
 
@@ -25,6 +26,19 @@ export interface ColumnDef<T> {
   className?: string;
   headerClassName?: string;
   width?: string;
+  useBadge?: boolean;
+  badgeVariantMap?: Record<
+    string,
+    | "success"
+    | "warning"
+    | "error"
+    | "info"
+    | "pending"
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+  >;
 }
 
 export interface ActionItem<T> {
@@ -74,6 +88,22 @@ export function AppTable<T extends Record<string, any>>({
   };
 
   const renderCellContent = (row: T, column: ColumnDef<T>): ReactNode => {
+    // If useBadge is true and no custom cell function, render with badge
+    if (column.useBadge && !column.cell && column.badgeVariantMap) {
+      let value: ReactNode;
+      if (typeof column.accessor === "function") {
+        value = column.accessor(row);
+      } else {
+        value = row[column.accessor as keyof T];
+      }
+
+      if (typeof value === "string" && column.badgeVariantMap[value]) {
+        const variant = column.badgeVariantMap[value];
+        return <Badge variant={variant}>{value}</Badge>;
+      }
+    }
+
+    // Default rendering
     if (column.cell) {
       return column.cell(row);
     }
@@ -84,8 +114,8 @@ export function AppTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="w-full -mx-2 sm:mx-0">
+    <div className="space-y-4 border border-gray-200 rounded-3xl pb-2">
+      <div className="w-full -mx-2 sm:mx-0 ">
         <div
           className="overflow-x-auto px-2 sm:px-0 scrollbar-thin"
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -95,29 +125,35 @@ export function AppTable<T extends Record<string, any>>({
             style={{ minWidth: `min(100%, ${minWidth})` }}
           >
             <div style={{ minWidth: minWidth }}>
-              <Table className="w-full">
+              <Table className="w-full ">
                 {caption && (
                   <TableCaption className="sr-only sm:not-sr-only">
                     {caption}
                   </TableCaption>
                 )}
                 <TableHeader>
-                  <TableRow>
-                    {columns.map((column, index) => (
-                      <TableHead
-                        key={index}
-                        className={`text-xs sm:text-sm whitespace-nowrap ${
-                          column.headerClassName || ""
-                        } ${column.width ? `w-[${column.width}]` : ""}`}
-                        style={
-                          column.width ? { width: column.width } : undefined
-                        }
-                      >
-                        {column.header}
-                      </TableHead>
-                    ))}
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    {columns.map((column, index) => {
+                      const isFirst = index === 0;
+                      const isLast = index === columns.length - 1 && !actions;
+                      return (
+                        <TableHead
+                          key={index}
+                          className={`text-xs sm:text-sm whitespace-nowrap font-semibold text-foreground bg-muted/50 h-8 py-1.5 p-3 ${
+                            isFirst ? "rounded-tl-3xl" : ""
+                          } ${isLast ? "rounded-tr-3xl" : ""} ${
+                            column.headerClassName || ""
+                          } ${column.width ? `w-[${column.width}]` : ""}`}
+                          style={
+                            column.width ? { width: column.width } : undefined
+                          }
+                        >
+                          {column.header}
+                        </TableHead>
+                      );
+                    })}
                     {actions && actions.length > 0 && (
-                      <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">
+                      <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap font-semibold text-foreground bg-muted/50 rounded-tr-3xl h-8 py-1.5 px-2.5">
                         Actions
                       </TableHead>
                     )}
@@ -129,7 +165,7 @@ export function AppTable<T extends Record<string, any>>({
                       {columns.map((column, colIndex) => (
                         <TableCell
                           key={colIndex}
-                          className={`text-xs sm:text-sm whitespace-nowrap ${
+                          className={`text-xs sm:text-sm whitespace-nowrap py-1.5 px-2.5 ${
                             column.className || ""
                           }`}
                         >
@@ -137,7 +173,7 @@ export function AppTable<T extends Record<string, any>>({
                         </TableCell>
                       ))}
                       {actions && actions.length > 0 && (
-                        <TableCell className="text-right whitespace-nowrap">
+                        <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
