@@ -1,5 +1,9 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Toggle between local and staging
 // Set to true for local development, false for staging
@@ -29,6 +33,11 @@ const createProxyConfig = () => ({
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   server: {
     proxy: {
       "/api": createProxyConfig(),
