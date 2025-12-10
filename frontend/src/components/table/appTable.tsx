@@ -1,4 +1,5 @@
-import { useState, ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { useTableStore } from "@/stores/table";
 import {
   Table,
   TableBody,
@@ -57,7 +58,7 @@ export interface FooterRow {
 export interface AppTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
-  actions?: ActionItem<T>[];
+  actions?: ActionItem<T>[] | ((row: T) => ActionItem<T>[]);
   itemsPerPage?: number;
   caption?: string;
   minWidth?: string;
@@ -75,12 +76,22 @@ export function AppTable<T extends Record<string, any>>({
   getRowId,
   footer,
 }: AppTableProps<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, itemsPerPage: storeItemsPerPage, setCurrentPage, setItemsPerPage } = useTableStore();
+
+  // Sync itemsPerPage with store
+  useEffect(() => {
+    if (itemsPerPage !== storeItemsPerPage) {
+      setItemsPerPage(itemsPerPage);
+    }
+  }, [itemsPerPage, storeItemsPerPage, setItemsPerPage]);
+
+  // Use store itemsPerPage or prop
+  const effectiveItemsPerPage = storeItemsPerPage || itemsPerPage;
 
   // Calculate pagination
-  const totalPages = Math.ceil(data.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const totalPages = Math.ceil(data.length / effectiveItemsPerPage);
+  const startIndex = (currentPage - 1) * effectiveItemsPerPage;
+  const endIndex = startIndex + effectiveItemsPerPage;
   const currentData = data.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
@@ -180,40 +191,43 @@ export function AppTable<T extends Record<string, any>>({
                           {renderCellContent(row, column)}
                         </TableCell>
                       ))}
-                      {actions && actions.length > 0 && (
-                        <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 sm:h-10 sm:w-10"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {actions.map((action, actionIndex) => {
-                                const Icon = action.icon;
-                                return (
-                                  <DropdownMenuItem
-                                    key={actionIndex}
-                                    onClick={() => action.onClick(row)}
-                                    className={
-                                      action.variant === "destructive"
-                                        ? "text-destructive"
-                                        : ""
-                                    }
-                                  >
-                                    {Icon && <Icon className="mr-2 h-4 w-4" />}
-                                    {action.label}
-                                  </DropdownMenuItem>
-                                );
-                              })}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      )}
+                      {actions && (() => {
+                        const rowActions = typeof actions === 'function' ? actions(row) : actions;
+                        return rowActions.length > 0 ? (
+                          <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 sm:h-10 sm:w-10"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {rowActions.map((action, actionIndex) => {
+                                  const Icon = action.icon;
+                                  return (
+                                    <DropdownMenuItem
+                                      key={actionIndex}
+                                      onClick={() => action.onClick(row)}
+                                      className={
+                                        action.variant === "destructive"
+                                          ? "text-destructive"
+                                          : ""
+                                      }
+                                    >
+                                      {Icon && <Icon className="mr-2 h-4 w-4" />}
+                                      {action.label}
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        ) : null;
+                      })()}
                     </TableRow>
                   ))}
                 </TableBody>

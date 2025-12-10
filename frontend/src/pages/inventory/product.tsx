@@ -1,7 +1,11 @@
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { AppButtons } from "@/components/app-Buttons";
 import { AppSearch } from "@/components/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
+import { AddProductDialog } from "@/components/add-product-dialog";
+import { ProductFormData } from "@/stores/product";
 import {
   Package,
   DollarSign,
@@ -50,62 +54,8 @@ interface ProductCardConfig {
   subtitle?: string;
 }
 
-const productCounts: ProductCounts = {
-  totalProducts: "5",
-  stockValue: "₱216,050",
-  potentialRevenue: "₱316,700",
-  lowStockItems: "2",
-};
-
-const productCardConfig: ProductCardConfig[] = [
-  {
-    title: "Total Products",
-    dataKey: "totalProducts",
-    countColor: "black",
-    bgColor: "bg-white",
-    icon: Package,
-    iconBgColor: "blue",
-  },
-  {
-    title: "Stock Value",
-    dataKey: "stockValue",
-    countColor: "black",
-    bgColor: "bg-white",
-    icon: DollarSign,
-    iconBgColor: "indigo",
-  },
-  {
-    title: "Potential Revenue",
-    dataKey: "potentialRevenue",
-    countColor: "green",
-    bgColor: "bg-white",
-    icon: TrendingUp,
-    iconBgColor: "green",
-  },
-  {
-    title: "Low Stock Items",
-    dataKey: "lowStockItems",
-    countColor: "orange",
-    bgColor: "bg-white",
-    icon: AlertTriangle,
-    iconBgColor: "orange",
-  },
-];
-
-interface Product {
-  id: string;
-  sku: string;
-  productName: string;
-  category: string;
-  quantity: number;
-  reorderLevel: number;
-  cost: string;
-  price: string;
-  warehouse: string;
-  status: "In Stock" | "Low Stock" | "Out of Stock";
-}
-
-const products: Product[] = [
+// Default products
+const defaultProducts: Product[] = [
   {
     id: "1",
     sku: "SKU-001",
@@ -168,6 +118,144 @@ const products: Product[] = [
   },
 ];
 
+// LocalStorage keys
+const PRODUCTS_STORAGE_KEY = "rzerp_products";
+const PRODUCT_COUNTER_KEY = "rzerp_product_counter";
+
+// Helper functions for localStorage
+const loadProductsFromStorage = (): Product[] => {
+  try {
+    const stored = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Initialize with default products if no data exists
+    saveProductsToStorage(defaultProducts);
+    // Initialize counter
+    if (!localStorage.getItem(PRODUCT_COUNTER_KEY)) {
+      localStorage.setItem(PRODUCT_COUNTER_KEY, "5");
+    }
+    return defaultProducts;
+  } catch (error) {
+    console.error("Error loading products from localStorage:", error);
+    return defaultProducts;
+  }
+};
+
+const saveProductsToStorage = (products: Product[]) => {
+  try {
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+  } catch (error) {
+    console.error("Error saving products to localStorage:", error);
+  }
+};
+
+const getNextProductId = (): string => {
+  try {
+    const counter = parseInt(
+      localStorage.getItem(PRODUCT_COUNTER_KEY) || "5",
+      10
+    );
+    const nextCounter = counter + 1;
+    localStorage.setItem(PRODUCT_COUNTER_KEY, nextCounter.toString());
+    return nextCounter.toString();
+  } catch (error) {
+    console.error("Error getting next product ID:", error);
+    return Date.now().toString();
+  }
+};
+
+// Calculate product status based on quantity and reorder level
+const calculateProductStatus = (
+  quantity: number,
+  reorderLevel: number
+): "In Stock" | "Low Stock" | "Out of Stock" => {
+  if (quantity === 0) {
+    return "Out of Stock";
+  }
+  if (quantity <= reorderLevel) {
+    return "Low Stock";
+  }
+  return "In Stock";
+};
+
+// Transform ProductFormData to Product
+const transformFormDataToProduct = (formData: ProductFormData): Product => {
+  const formatCurrency = (amount: number) => {
+    return `₱${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const quantity = parseInt(formData.initialQuantity) || 0;
+  const reorderLevel = parseInt(formData.reorderLevel) || 0;
+  const cost = parseFloat(formData.costPrice) || 0;
+  const price = parseFloat(formData.sellingPrice) || 0;
+  const status = calculateProductStatus(quantity, reorderLevel);
+
+  return {
+    id: getNextProductId(),
+    sku: formData.sku.trim(),
+    productName: formData.productName.trim(),
+    category: formData.category,
+    quantity,
+    reorderLevel,
+    cost: formatCurrency(cost),
+    price: formatCurrency(price),
+    warehouse: formData.warehouse,
+    status,
+  };
+};
+
+const productCardConfig: ProductCardConfig[] = [
+  {
+    title: "Total Products",
+    dataKey: "totalProducts",
+    countColor: "black",
+    bgColor: "bg-white",
+    icon: Package,
+    iconBgColor: "blue",
+  },
+  {
+    title: "Stock Value",
+    dataKey: "stockValue",
+    countColor: "black",
+    bgColor: "bg-white",
+    icon: DollarSign,
+    iconBgColor: "indigo",
+  },
+  {
+    title: "Potential Revenue",
+    dataKey: "potentialRevenue",
+    countColor: "green",
+    bgColor: "bg-white",
+    icon: TrendingUp,
+    iconBgColor: "green",
+  },
+  {
+    title: "Low Stock Items",
+    dataKey: "lowStockItems",
+    countColor: "orange",
+    bgColor: "bg-white",
+    icon: AlertTriangle,
+    iconBgColor: "orange",
+  },
+];
+
+interface Product {
+  id: string;
+  sku: string;
+  productName: string;
+  category: string;
+  quantity: number;
+  reorderLevel: number;
+  cost: string;
+  price: string;
+  warehouse: string;
+  status: "In Stock" | "Low Stock" | "Out of Stock";
+}
+
 const productColumns: ColumnDef<Product>[] = [
   {
     header: "SKU",
@@ -223,32 +311,132 @@ const productColumns: ColumnDef<Product>[] = [
   },
 ];
 
-const productActions: ActionItem<Product>[] = [
-  {
-    label: "View",
-    icon: Eye,
-    onClick: (product) => {
-      console.log("View product:", product);
-    },
-  },
-  {
-    label: "Edit",
-    icon: Edit,
-    onClick: (product) => {
-      console.log("Edit product:", product);
-    },
-  },
-  {
-    label: "Delete",
-    icon: Trash2,
-    onClick: (product) => {
-      console.log("Delete product:", product);
-    },
-    variant: "destructive",
-  },
-];
-
 export function ProductTab() {
+  // Load products from localStorage on mount
+  const [products, setProducts] = useState<Product[]>(() =>
+    loadProductsFromStorage()
+  );
+
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+
+  // Calculate product counts dynamically
+  const productCounts = useMemo(() => {
+    const formatCurrency = (amount: number): string => {
+      return `₱${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    };
+
+    const parseCurrency = (value: string) => {
+      return parseFloat(value.replace(/[₱,]/g, "")) || 0;
+    };
+
+    const totalProducts = products.length;
+
+    const stockValue = products.reduce((sum, product) => {
+      const cost = parseCurrency(product.cost);
+      return sum + cost * product.quantity;
+    }, 0);
+
+    const potentialRevenue = products.reduce((sum, product) => {
+      const price = parseCurrency(product.price);
+      return sum + price * product.quantity;
+    }, 0);
+
+    const lowStockItems = products.filter(
+      (product) =>
+        product.status === "Low Stock" || product.status === "Out of Stock"
+    ).length;
+
+    return {
+      totalProducts: totalProducts.toString(),
+      stockValue: formatCurrency(stockValue),
+      potentialRevenue: formatCurrency(potentialRevenue),
+      lowStockItems: lowStockItems.toString(),
+    };
+  }, [products]);
+
+  // Handle product submission
+  const handleProductSubmit = (data: ProductFormData) => {
+    try {
+      // Transform form data to product format
+      const newProduct = transformFormDataToProduct(data);
+
+      // Add new product to the beginning of the list
+      const updatedProducts = [newProduct, ...products];
+
+      // Save to localStorage
+      saveProductsToStorage(updatedProducts);
+
+      // Update state to trigger re-render
+      setProducts(updatedProducts);
+
+      // Show success toast
+      toast.success("Product Added Successfully", {
+        description: `${newProduct.productName} has been added to inventory.`,
+        duration: 3000,
+      });
+
+      console.log("Product added successfully:", newProduct);
+    } catch (error) {
+      console.error("Error adding product:", error);
+      // Show error toast
+      toast.error("Failed to Add Product", {
+        description:
+          "An error occurred while adding the product. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle delete product
+  const handleDeleteProduct = (product: Product) => {
+    try {
+      const updatedProducts = products.filter((p) => p.id !== product.id);
+      saveProductsToStorage(updatedProducts);
+      setProducts(updatedProducts);
+
+      toast.success("Product Deleted", {
+        description: `${product.productName} has been deleted.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to Delete Product", {
+        description: "An error occurred while deleting the product.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Update actions with delete handler
+  const productActions = useMemo<ActionItem<Product>[]>(
+    () => [
+      {
+        label: "View",
+        icon: Eye,
+        onClick: (product) => {
+          console.log("View product:", product);
+        },
+      },
+      {
+        label: "Edit",
+        icon: Edit,
+        onClick: (product) => {
+          console.log("Edit product:", product);
+        },
+      },
+      {
+        label: "Delete",
+        icon: Trash2,
+        onClick: handleDeleteProduct,
+        variant: "destructive",
+      },
+    ],
+    [products]
+  );
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -279,6 +467,7 @@ export function ProductTab() {
           add={false}
           addProduct={true}
           addProductOrder={1}
+          onAddProductClick={() => setIsAddProductOpen(true)}
         />
       </div>
       <div className="w-full">
@@ -291,6 +480,14 @@ export function ProductTab() {
           getRowId={(row) => row.id}
         />
       </div>
+
+      {/* Add Product Dialog */}
+      <AddProductDialog
+        open={isAddProductOpen}
+        onOpenChange={setIsAddProductOpen}
+        title="Add Product"
+        onSubmit={handleProductSubmit}
+      />
     </div>
   );
 }

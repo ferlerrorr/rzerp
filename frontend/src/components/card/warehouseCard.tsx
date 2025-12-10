@@ -97,7 +97,7 @@ export function WarehouseCard({
             </div>
           </div>
           <Badge
-            variant={status === "Active" ? "success" : "default"}
+            variant={status === "Active" ? "success" : "error"}
             className="ml-2"
           >
             {status}

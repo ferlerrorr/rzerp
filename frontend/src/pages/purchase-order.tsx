@@ -1,3 +1,5 @@
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { AppButtons } from "@/components/app-Buttons";
 import { AppSearch } from "@/components/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
@@ -5,6 +7,8 @@ import {
   PurchaseOrderCard,
   PurchaseOrderItem,
 } from "@/components/card/purchaseOrderCard";
+import { CreatePODialog } from "@/components/create-po-dialog";
+import { PurchaseOrderFormData } from "@/stores/purchaseOrder";
 import { ShoppingCart, Calendar, Package, CheckCircle2 } from "lucide-react";
 
 interface PurchaseOrderCounts {
@@ -45,66 +49,8 @@ interface PurchaseOrderCardConfig {
   subtitle?: string;
 }
 
-const purchaseOrderCounts: PurchaseOrderCounts = {
-  totalPOs: "3",
-  pendingApproval: "1",
-  totalValue: "₱48,750",
-  received: "0",
-};
-
-const purchaseOrderCardConfig: PurchaseOrderCardConfig[] = [
-  {
-    title: "Total POs",
-    dataKey: "totalPOs",
-    countColor: "black",
-    bgColor: "bg-white",
-    icon: ShoppingCart,
-    iconBgColor: "blue",
-    subtitle: "this month",
-  },
-  {
-    title: "Pending Approval",
-    dataKey: "pendingApproval",
-    countColor: "orange",
-    bgColor: "bg-white",
-    icon: Calendar,
-    iconBgColor: "orange",
-    subtitle: "awaiting approval",
-  },
-  {
-    title: "Total Value",
-    dataKey: "totalValue",
-    countColor: "black",
-    bgColor: "bg-white",
-    icon: Package,
-    iconBgColor: "green",
-    subtitle: "this month",
-  },
-  {
-    title: "Received",
-    dataKey: "received",
-    countColor: "green",
-    bgColor: "bg-white",
-    icon: CheckCircle2,
-    iconBgColor: "green",
-    subtitle: "completed orders",
-  },
-];
-
-interface PurchaseOrder {
-  id: string;
-  poNumber: string;
-  status: "approved" | "ordered" | "pending";
-  vendor: string;
-  requestedBy: string;
-  orderDate: string;
-  expectedDelivery: string;
-  totalAmount: string;
-  items: PurchaseOrderItem[];
-  notes?: string;
-}
-
-const purchaseOrders: PurchaseOrder[] = [
+// Default purchase orders
+const defaultPurchaseOrders: PurchaseOrder[] = [
   {
     id: "1",
     poNumber: "PO-2024-001",
@@ -176,21 +122,318 @@ const purchaseOrders: PurchaseOrder[] = [
   },
 ];
 
+// LocalStorage keys
+const PURCHASE_ORDERS_STORAGE_KEY = "rzerp_purchase_orders";
+const PO_COUNTER_KEY = "rzerp_po_counter";
+
+// Helper functions for localStorage
+const loadPurchaseOrdersFromStorage = (): PurchaseOrder[] => {
+  try {
+    const stored = localStorage.getItem(PURCHASE_ORDERS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Initialize with default purchase orders if no data exists
+    savePurchaseOrdersToStorage(defaultPurchaseOrders);
+    // Initialize counter
+    if (!localStorage.getItem(PO_COUNTER_KEY)) {
+      localStorage.setItem(PO_COUNTER_KEY, "3");
+    }
+    return defaultPurchaseOrders;
+  } catch (error) {
+    console.error("Error loading purchase orders from localStorage:", error);
+    return defaultPurchaseOrders;
+  }
+};
+
+const savePurchaseOrdersToStorage = (orders: PurchaseOrder[]) => {
+  try {
+    localStorage.setItem(PURCHASE_ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  } catch (error) {
+    console.error("Error saving purchase orders to localStorage:", error);
+  }
+};
+
+const getNextPOId = (): string => {
+  try {
+    const counter = parseInt(localStorage.getItem(PO_COUNTER_KEY) || "3", 10);
+    const nextCounter = counter + 1;
+    localStorage.setItem(PO_COUNTER_KEY, nextCounter.toString());
+    return nextCounter.toString();
+  } catch (error) {
+    console.error("Error getting next PO ID:", error);
+    return Date.now().toString();
+  }
+};
+
+// Transform PurchaseOrderFormData to PurchaseOrder
+const transformFormDataToPurchaseOrder = (
+  formData: PurchaseOrderFormData
+): PurchaseOrder => {
+  const formatCurrency = (amount: number) => {
+    return `₱${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const totalAmount = formData.items.reduce(
+    (sum, item) => sum + item.subtotal,
+    0
+  );
+
+  // Transform items to match PurchaseOrderItem format
+  const items: PurchaseOrderItem[] = formData.items.map((item) => ({
+    name: item.productName.trim(),
+    quantity: parseInt(item.quantity) || 0,
+    unitPrice: parseFloat(item.unitPrice) || 0,
+    subtotal: item.subtotal,
+  }));
+
+  return {
+    id: getNextPOId(),
+    poNumber: formData.poNumber.trim(),
+    status: "pending", // New POs start as pending
+    vendor: formData.vendor,
+    requestedBy: formData.requestedBy.trim(),
+    orderDate: formData.orderDate,
+    expectedDelivery: formData.expectedDelivery,
+    totalAmount: formatCurrency(totalAmount),
+    items,
+    notes: formData.notes.trim() || undefined,
+  };
+};
+
+const purchaseOrderCardConfig: PurchaseOrderCardConfig[] = [
+  {
+    title: "Total POs",
+    dataKey: "totalPOs",
+    countColor: "black",
+    bgColor: "bg-white",
+    icon: ShoppingCart,
+    iconBgColor: "blue",
+    subtitle: "this month",
+  },
+  {
+    title: "Pending Approval",
+    dataKey: "pendingApproval",
+    countColor: "orange",
+    bgColor: "bg-white",
+    icon: Calendar,
+    iconBgColor: "orange",
+    subtitle: "awaiting approval",
+  },
+  {
+    title: "Total Value",
+    dataKey: "totalValue",
+    countColor: "black",
+    bgColor: "bg-white",
+    icon: Package,
+    iconBgColor: "green",
+    subtitle: "this month",
+  },
+  {
+    title: "Received",
+    dataKey: "received",
+    countColor: "green",
+    bgColor: "bg-white",
+    icon: CheckCircle2,
+    iconBgColor: "green",
+    subtitle: "completed orders",
+  },
+];
+
+interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  status: "approved" | "ordered" | "pending";
+  vendor: string;
+  requestedBy: string;
+  orderDate: string;
+  expectedDelivery: string;
+  totalAmount: string;
+  items: PurchaseOrderItem[];
+  notes?: string;
+}
+
 export function PurchaseOrderPage() {
+  // Load purchase orders from localStorage on mount
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() =>
+    loadPurchaseOrdersFromStorage()
+  );
+
+  const [isCreatePOOpen, setIsCreatePOOpen] = useState(false);
+
+  // Calculate purchase order counts dynamically
+  const purchaseOrderCounts = useMemo(() => {
+    const formatCurrency = (amount: number): string => {
+      return `₱${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    };
+
+    const parseCurrency = (value: string) => {
+      return parseFloat(value.replace(/[₱,]/g, "")) || 0;
+    };
+
+    const pendingApproval = purchaseOrders.filter(
+      (po) => po.status === "pending"
+    ).length;
+
+    const received = purchaseOrders.filter(
+      (po) => po.status === "ordered"
+    ).length;
+
+    // Get current month
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const totalPOsThisMonth = purchaseOrders.filter((po) => {
+      const orderDate = new Date(po.orderDate);
+      return (
+        orderDate.getMonth() === currentMonth &&
+        orderDate.getFullYear() === currentYear
+      );
+    }).length;
+
+    const totalValueThisMonth = purchaseOrders
+      .filter((po) => {
+        const orderDate = new Date(po.orderDate);
+        return (
+          orderDate.getMonth() === currentMonth &&
+          orderDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, po) => sum + parseCurrency(po.totalAmount), 0);
+
+    return {
+      totalPOs: totalPOsThisMonth.toString(),
+      pendingApproval: pendingApproval.toString(),
+      totalValue: formatCurrency(totalValueThisMonth),
+      received: received.toString(),
+    };
+  }, [purchaseOrders]);
+
+  // Handle purchase order submission
+  const handlePOSubmit = (data: PurchaseOrderFormData) => {
+    try {
+      // Transform form data to purchase order format
+      const newPO = transformFormDataToPurchaseOrder(data);
+
+      // Add new purchase order to the beginning of the list
+      const updatedPOs = [newPO, ...purchaseOrders];
+
+      // Save to localStorage
+      savePurchaseOrdersToStorage(updatedPOs);
+
+      // Update state to trigger re-render
+      setPurchaseOrders(updatedPOs);
+
+      // Show success toast
+      toast.success("Purchase Order Created Successfully", {
+        description: `PO ${newPO.poNumber} has been created and is pending approval.`,
+        duration: 3000,
+      });
+
+      console.log("Purchase order created successfully:", newPO);
+    } catch (error) {
+      console.error("Error creating purchase order:", error);
+      // Show error toast
+      toast.error("Failed to Create Purchase Order", {
+        description:
+          "An error occurred while creating the purchase order. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
   const handleSendToVendor = (poId: string) => {
-    console.log("Send to vendor:", poId);
+    try {
+      const updatedPOs = purchaseOrders.map((po) =>
+        po.id === poId ? { ...po, status: "ordered" as const } : po
+      );
+      savePurchaseOrdersToStorage(updatedPOs);
+      setPurchaseOrders(updatedPOs);
+
+      const po = purchaseOrders.find((p) => p.id === poId);
+      toast.success("PO Sent to Vendor", {
+        description: `PO ${po?.poNumber} has been sent to vendor.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error sending PO to vendor:", error);
+      toast.error("Failed to Send PO to Vendor", {
+        description: "An error occurred while sending the PO.",
+        duration: 4000,
+      });
+    }
   };
 
   const handleMarkAsReceived = (poId: string) => {
-    console.log("Mark as received:", poId);
+    try {
+      const updatedPOs = purchaseOrders.map((po) =>
+        po.id === poId ? { ...po, status: "approved" as const } : po
+      );
+      savePurchaseOrdersToStorage(updatedPOs);
+      setPurchaseOrders(updatedPOs);
+
+      const po = purchaseOrders.find((p) => p.id === poId);
+      toast.success("PO Marked as Received", {
+        description: `PO ${po?.poNumber} has been marked as received.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error marking PO as received:", error);
+      toast.error("Failed to Mark PO as Received", {
+        description: "An error occurred while updating the PO.",
+        duration: 4000,
+      });
+    }
   };
 
   const handleApprove = (poId: string) => {
-    console.log("Approve:", poId);
+    try {
+      const updatedPOs = purchaseOrders.map((po) =>
+        po.id === poId ? { ...po, status: "approved" as const } : po
+      );
+      savePurchaseOrdersToStorage(updatedPOs);
+      setPurchaseOrders(updatedPOs);
+
+      const po = purchaseOrders.find((p) => p.id === poId);
+      toast.success("PO Approved", {
+        description: `PO ${po?.poNumber} has been approved.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error approving PO:", error);
+      toast.error("Failed to Approve PO", {
+        description: "An error occurred while approving the PO.",
+        duration: 4000,
+      });
+    }
   };
 
   const handleReject = (poId: string) => {
-    console.log("Reject:", poId);
+    try {
+      // For now, we'll just remove rejected POs
+      // In a real app, you might want to keep them with a "rejected" status
+      const updatedPOs = purchaseOrders.filter((po) => po.id !== poId);
+      savePurchaseOrdersToStorage(updatedPOs);
+      setPurchaseOrders(updatedPOs);
+
+      const po = purchaseOrders.find((p) => p.id === poId);
+      toast.success("PO Rejected", {
+        description: `PO ${po?.poNumber} has been rejected and removed.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error rejecting PO:", error);
+      toast.error("Failed to Reject PO", {
+        description: "An error occurred while rejecting the PO.",
+        duration: 4000,
+      });
+    }
   };
 
   const handleViewDetails = (poId: string) => {
@@ -232,6 +475,7 @@ export function PurchaseOrderPage() {
           add={false}
           createPO={true}
           createPOOrder={1}
+          onCreatePOClick={() => setIsCreatePOOpen(true)}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
@@ -268,6 +512,14 @@ export function PurchaseOrderPage() {
           />
         ))}
       </div>
+
+      {/* Create PO Dialog */}
+      <CreatePODialog
+        open={isCreatePOOpen}
+        onOpenChange={setIsCreatePOOpen}
+        title="Create Purchase Order"
+        onSubmit={handlePOSubmit}
+      />
     </div>
   );
 }

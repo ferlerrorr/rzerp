@@ -1,6 +1,11 @@
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { AppButtons } from "@/components/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
-import { AppTable, ColumnDef } from "@/components/table/appTable";
+import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
+import { PayrollProcessingDialog } from "@/components/payroll-processing-dialog";
+import { PayrollFormData } from "@/stores/payroll";
+import { Eye, Edit, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface PayrollData {
   total_monthly_payroll: string;
@@ -67,8 +72,12 @@ interface PayrollEmployee {
   status: string;
 }
 
-// Sample payroll employee data - This would typically come from an API/database
-const payrollEmployees: PayrollEmployee[] = [
+// LocalStorage keys
+const PAYROLL_EMPLOYEES_STORAGE_KEY = "rzerp_payroll_employees";
+const PAYROLL_COUNTER_KEY = "rzerp_payroll_counter";
+
+// Default payroll employee data - This would typically come from an API/database
+const defaultPayrollEmployees: PayrollEmployee[] = [
   {
     id: "PR001",
     employee: "John Doe",
@@ -181,6 +190,145 @@ const payrollEmployees: PayrollEmployee[] = [
   },
 ];
 
+// Helper functions for localStorage
+const loadPayrollEmployeesFromStorage = (): PayrollEmployee[] => {
+  try {
+    const stored = localStorage.getItem(PAYROLL_EMPLOYEES_STORAGE_KEY);
+    if (stored) {
+      const employees = JSON.parse(stored);
+      return sortPayrollEmployeesById(employees);
+    }
+    const sortedDefault = sortPayrollEmployeesById(defaultPayrollEmployees);
+    savePayrollEmployeesToStorage(sortedDefault);
+    if (!localStorage.getItem(PAYROLL_COUNTER_KEY)) {
+      localStorage.setItem(PAYROLL_COUNTER_KEY, "10");
+    }
+    return sortedDefault;
+  } catch (error) {
+    console.error("Error loading payroll employees from localStorage:", error);
+    return sortPayrollEmployeesById(defaultPayrollEmployees);
+  }
+};
+
+// Sort payroll employees by status priority (Pending → Failed → Processed), then by ID
+const sortPayrollEmployeesById = (
+  employees: PayrollEmployee[]
+): PayrollEmployee[] => {
+  const statusPriority: Record<string, number> = {
+    Pending: 1,
+    Failed: 2,
+    Processed: 3,
+  };
+
+  return [...employees].sort((a, b) => {
+    // First sort by status priority
+    const priorityA = statusPriority[a.status] || 999;
+    const priorityB = statusPriority[b.status] || 999;
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    // If same status, sort by ID
+    const numA = parseInt(a.id.replace("PR", ""), 10);
+    const numB = parseInt(b.id.replace("PR", ""), 10);
+    return numA - numB;
+  });
+};
+
+const savePayrollEmployeesToStorage = (employees: PayrollEmployee[]) => {
+  try {
+    localStorage.setItem(
+      PAYROLL_EMPLOYEES_STORAGE_KEY,
+      JSON.stringify(employees)
+    );
+  } catch (error) {
+    console.error("Error saving payroll employees to localStorage:", error);
+  }
+};
+
+const getNextPayrollId = (): string => {
+  try {
+    const counter = parseInt(
+      localStorage.getItem(PAYROLL_COUNTER_KEY) || "10",
+      10
+    );
+    const nextCounter = counter + 1;
+    localStorage.setItem(PAYROLL_COUNTER_KEY, nextCounter.toString());
+    return `PR${nextCounter.toString().padStart(3, "0")}`;
+  } catch (error) {
+    console.error("Error getting next payroll ID:", error);
+    return `PR${Date.now()}`;
+  }
+};
+
+// Load employees from employees page localStorage
+const loadEmployeesForPayroll = (): Array<{
+  id: string;
+  name: string;
+  salary: string;
+  position?: string;
+}> => {
+  try {
+    const stored = localStorage.getItem("rzerp_employees");
+    if (stored) {
+      const employees = JSON.parse(stored);
+      return employees.map(
+        (emp: {
+          id: string;
+          name: string;
+          salary: string;
+          position?: string;
+        }) => ({
+          id: emp.id,
+          name: emp.name,
+          salary: emp.salary,
+          position: emp.position,
+        })
+      );
+    }
+    return [];
+  } catch (error) {
+    console.error("Error loading employees for payroll:", error);
+    return [];
+  }
+};
+
+// Transform PayrollFormData to PayrollEmployee
+const transformFormDataToPayrollEmployee = (
+  formData: PayrollFormData
+): PayrollEmployee => {
+  const formatCurrency = (amount: number) => {
+    return `₱${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const basicSalary = parseFloat(formData.basicSalary) || 0;
+  const allowances = parseFloat(formData.allowances) || 0;
+  const overtimePay = parseFloat(formData.overtimePay) || 0;
+  const grossPay = basicSalary + allowances + overtimePay;
+  const sss = parseFloat(formData.sssContribution) || 0;
+  const philHealth = parseFloat(formData.philHealthContribution) || 0;
+  const pagIbig = parseFloat(formData.pagIbigContribution) || 0;
+  const tax = parseFloat(formData.withholdingTax) || 0;
+  const totalDeductions = sss + philHealth + pagIbig + tax;
+  const netPay = grossPay - totalDeductions;
+
+  return {
+    id: getNextPayrollId(),
+    employee: formData.employeeName,
+    basicSalary: formatCurrency(basicSalary),
+    allowances: formatCurrency(allowances),
+    ot: formatCurrency(overtimePay),
+    grossPay: formatCurrency(grossPay),
+    deductions: formatCurrency(totalDeductions),
+    netPay: formatCurrency(netPay),
+    status: "Pending", // Start as Pending, then change to Processed when finalized
+  };
+};
+
 // Table column definitions
 const payrollColumns: ColumnDef<PayrollEmployee>[] = [
   {
@@ -225,6 +373,8 @@ const payrollColumns: ColumnDef<PayrollEmployee>[] = [
     headerClassName: "text-center",
   },
 ];
+
+// Table action items - will be defined inside component to use handlers
 
 // Government Contributions Data
 interface ContributionsData {
@@ -277,6 +427,186 @@ const contributionsCardConfig: ContributionsCardConfig[] = [
 ];
 
 export function PayrollTab() {
+  // Load payroll employees from localStorage on mount
+  const [payrollEmployees, setPayrollEmployees] = useState<PayrollEmployee[]>(
+    () => loadPayrollEmployeesFromStorage()
+  );
+
+  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
+
+  // Load employees for payroll processing
+  const employeesForPayroll = useMemo(() => {
+    return loadEmployeesForPayroll();
+  }, []);
+
+  // Handle payroll processing submission
+  const handlePayrollSubmit = (data: PayrollFormData) => {
+    try {
+      // Transform form data to payroll employee format
+      const newPayrollEmployee = transformFormDataToPayrollEmployee(data);
+
+      // Add new payroll employee and sort by status priority
+      const updatedEmployees = sortPayrollEmployeesById([
+        newPayrollEmployee,
+        ...payrollEmployees,
+      ]);
+
+      // Save to localStorage
+      savePayrollEmployeesToStorage(updatedEmployees);
+
+      // Update state to trigger re-render
+      setPayrollEmployees(updatedEmployees);
+
+      // Show success toast
+      toast.success("Payroll Created Successfully", {
+        description: `Payroll for ${data.employeeName} has been created and is pending processing.`,
+        duration: 3000,
+      });
+
+      console.log("Payroll processed successfully:", newPayrollEmployee);
+    } catch (error) {
+      console.error("Error processing payroll:", error);
+      // Show error toast
+      toast.error("Failed to Process Payroll", {
+        description:
+          "An error occurred while processing the payroll. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle mark as processed
+  const handleMarkAsProcessed = (record: PayrollEmployee) => {
+    try {
+      const updatedEmployees = sortPayrollEmployeesById(
+        payrollEmployees.map((emp) =>
+          emp.id === record.id ? { ...emp, status: "Processed" } : emp
+        )
+      );
+
+      // Save to localStorage
+      savePayrollEmployeesToStorage(updatedEmployees);
+
+      // Update state to trigger re-render
+      setPayrollEmployees(updatedEmployees);
+
+      // Show success toast
+      toast.success("Payroll Status Updated", {
+        description: `Payroll ${record.id} for ${record.employee} has been marked as Processed.`,
+        duration: 3000,
+      });
+
+      console.log("Payroll status updated to Processed:", record.id);
+    } catch (error) {
+      console.error("Error updating payroll status:", error);
+      toast.error("Failed to Update Status", {
+        description:
+          "An error occurred while updating the payroll status. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle mark as pending
+  const handleMarkAsPending = (record: PayrollEmployee) => {
+    try {
+      const updatedEmployees = sortPayrollEmployeesById(
+        payrollEmployees.map((emp) =>
+          emp.id === record.id ? { ...emp, status: "Pending" } : emp
+        )
+      );
+
+      // Save to localStorage
+      savePayrollEmployeesToStorage(updatedEmployees);
+
+      // Update state to trigger re-render
+      setPayrollEmployees(updatedEmployees);
+
+      // Show success toast
+      toast.success("Payroll Status Updated", {
+        description: `Payroll ${record.id} for ${record.employee} has been marked as Pending.`,
+        duration: 3000,
+      });
+
+      console.log("Payroll status updated to Pending:", record.id);
+    } catch (error) {
+      console.error("Error updating payroll status:", error);
+      toast.error("Failed to Update Status", {
+        description:
+          "An error occurred while updating the payroll status. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle mark as failed
+  const handleMarkAsFailed = (record: PayrollEmployee) => {
+    try {
+      const updatedEmployees = sortPayrollEmployeesById(
+        payrollEmployees.map((emp) =>
+          emp.id === record.id ? { ...emp, status: "Failed" } : emp
+        )
+      );
+
+      // Save to localStorage
+      savePayrollEmployeesToStorage(updatedEmployees);
+
+      // Update state to trigger re-render
+      setPayrollEmployees(updatedEmployees);
+
+      // Show success toast
+      toast.success("Payroll Status Updated", {
+        description: `Payroll ${record.id} for ${record.employee} has been marked as Failed.`,
+        duration: 3000,
+      });
+
+      console.log("Payroll status updated to Failed:", record.id);
+    } catch (error) {
+      console.error("Error updating payroll status:", error);
+      toast.error("Failed to Update Status", {
+        description:
+          "An error occurred while updating the payroll status. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Table action items
+  const payrollActions: ActionItem<PayrollEmployee>[] = [
+    {
+      label: "View",
+      icon: Eye,
+      onClick: (record) => {
+        console.log("View payroll:", record);
+        // Handle view action
+      },
+    },
+    {
+      label: "Edit",
+      icon: Edit,
+      onClick: (record) => {
+        console.log("Edit payroll:", record);
+        // Handle edit action
+      },
+    },
+    {
+      label: "Mark as Processed",
+      icon: CheckCircle2,
+      onClick: handleMarkAsProcessed,
+    },
+    {
+      label: "Mark as Pending",
+      icon: Clock,
+      onClick: handleMarkAsPending,
+    },
+    {
+      label: "Mark as Failed",
+      icon: XCircle,
+      onClick: handleMarkAsFailed,
+      variant: "destructive",
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
       <div className="flex flex-row justify-between items-center">
@@ -292,6 +622,7 @@ export function PayrollTab() {
           processPayroll={true}
           processPayrollOrder={1}
           processPayrollLabel="Process Payroll"
+          onProcessPayrollClick={() => setIsProcessPayrollOpen(true)}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -309,6 +640,7 @@ export function PayrollTab() {
         <AppTable
           data={payrollEmployees}
           columns={payrollColumns}
+          actions={payrollActions}
           itemsPerPage={5}
           caption="Payroll records for current period"
           minWidth="1000px"
@@ -333,6 +665,15 @@ export function PayrollTab() {
           ))}
         </div>
       </div>
+
+      {/* Payroll Processing Dialog */}
+      <PayrollProcessingDialog
+        open={isProcessPayrollOpen}
+        onOpenChange={setIsProcessPayrollOpen}
+        title="Process Payroll"
+        onSubmit={handlePayrollSubmit}
+        employees={employeesForPayroll}
+      />
     </div>
   );
 }

@@ -1,6 +1,9 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { cn } from "@/lib/utils";
+import { useTabsStore } from "@/stores/tabs";
 
 export interface TabItem {
   value: string;
@@ -21,10 +24,27 @@ export function AppTabs({
   className,
   tabsListClassName,
 }: AppTabsProps) {
+  const { activeTab, setActiveTab } = useTabsStore();
   const defaultTab = defaultValue || tabs[0]?.value;
+  
+  // Check if current activeTab exists in current page's tabs
+  const tabValues = tabs.map((tab) => tab.value);
+  const isValidTab = activeTab && tabValues.includes(activeTab);
+  const effectiveTab = isValidTab ? activeTab : defaultTab;
+
+  // Sync store with default value when tab doesn't exist or is empty
+  useEffect(() => {
+    if (!isValidTab && defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, isValidTab, setActiveTab]);
 
   return (
-    <Tabs defaultValue={defaultTab} className={cn("w-full", className)}>
+    <Tabs
+      value={effectiveTab}
+      onValueChange={setActiveTab}
+      className={cn("w-full", className)}
+    >
       <div
         className="w-full overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0 scrollbar-thin"
         style={{ WebkitOverflowScrolling: "touch" }}

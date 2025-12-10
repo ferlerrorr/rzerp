@@ -1,7 +1,11 @@
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import { AppButtons } from "@/components/app-Buttons";
 import { AppSearch } from "@/components/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { VendorCard } from "@/components/card/vendorCard";
+import { AddVendorDialog } from "@/components/add-vendor-dialog";
+import { VendorFormData } from "@/stores/vendor";
 import { Truck, DollarSign, TrendingUp } from "lucide-react";
 
 interface VendorCounts {
@@ -38,11 +42,156 @@ interface VendorCardConfig {
   subtitle?: string;
 }
 
-const vendorCounts: VendorCounts = {
-  totalVendors: "4",
-  totalPurchases: "₱3,592,000",
-  outstandingBalance: "₱318,500",
-  topVendor: "Tech Supplies Inc.",
+// Default vendors
+const defaultVendors: Vendor[] = [
+  {
+    companyName: "Tech Supplies Inc.",
+    category: "Electronics",
+    status: "Active",
+    phone: "+63 917 123 4567",
+    email: "john@techsupplies.ph",
+    location: "Makati City, Metro Manila",
+    totalPurchases: "₱2,500,000",
+    outstanding: "₱250,000",
+    iconBgColor: "blue",
+  },
+  {
+    companyName: "Office Solutions Co.",
+    category: "Office Supplies",
+    status: "Active",
+    phone: "+63 917 234 5678",
+    email: "info@officesolutions.ph",
+    location: "Quezon City, Metro Manila",
+    totalPurchases: "₱1,800,000",
+    outstanding: "₱68,500",
+    iconBgColor: "green",
+  },
+  {
+    companyName: "Industrial Parts Ltd.",
+    category: "Manufacturing",
+    status: "Active",
+    phone: "+63 917 345 6789",
+    email: "sales@industrialparts.ph",
+    location: "Pasig City, Metro Manila",
+    totalPurchases: "₱950,000",
+    outstanding: "₱0",
+    iconBgColor: "purple",
+  },
+  {
+    companyName: "Global Trading Corp.",
+    category: "General Merchandise",
+    status: "Inactive",
+    phone: "+63 917 456 7890",
+    email: "contact@globaltrading.ph",
+    location: "Taguig City, Metro Manila",
+    totalPurchases: "₱320,000",
+    outstanding: "₱0",
+    iconBgColor: "orange",
+  },
+];
+
+// LocalStorage keys
+const VENDORS_STORAGE_KEY = "rzerp_vendors";
+const VENDORS_INITIALIZED_KEY = "rzerp_vendors_initialized";
+
+// Helper functions for localStorage
+const loadVendorsFromStorage = (): Vendor[] => {
+  try {
+    const stored = localStorage.getItem(VENDORS_STORAGE_KEY);
+    const initialized = localStorage.getItem(VENDORS_INITIALIZED_KEY);
+
+    // If not initialized yet, or if stored data is corrupted, use defaults
+    if (!initialized || !stored) {
+      saveVendorsToStorage(defaultVendors);
+      localStorage.setItem(VENDORS_INITIALIZED_KEY, "true");
+      return defaultVendors;
+    }
+
+    const vendors = JSON.parse(stored);
+
+    // Check if all vendors have ₱0 totalPurchases (likely corrupted)
+    const parseCurrency = (value: string | undefined | null) => {
+      if (!value || typeof value !== "string") return 0;
+      return parseFloat(value.replace(/[₱,]/g, "")) || 0;
+    };
+
+    const allHaveZeroPurchases = vendors.every((vendor: Vendor) => {
+      const purchases = parseCurrency(vendor.totalPurchases);
+      return purchases === 0;
+    });
+
+    // If all vendors have ₱0, reset to defaults (data was likely corrupted)
+    if (allHaveZeroPurchases) {
+      saveVendorsToStorage(defaultVendors);
+      return defaultVendors;
+    }
+
+    // Ensure all vendors have required properties with defaults
+    return vendors.map((vendor: Vendor) => ({
+      ...vendor,
+      totalPurchases: vendor.totalPurchases || "₱0",
+      outstanding: vendor.outstanding || "₱0",
+      iconBgColor: vendor.iconBgColor || "blue",
+    }));
+  } catch (error) {
+    console.error("Error loading vendors from localStorage:", error);
+    // Reset to defaults on error
+    saveVendorsToStorage(defaultVendors);
+    localStorage.setItem(VENDORS_INITIALIZED_KEY, "true");
+    return defaultVendors;
+  }
+};
+
+const saveVendorsToStorage = (vendors: Vendor[]) => {
+  try {
+    localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(vendors));
+  } catch (error) {
+    console.error("Error saving vendors to localStorage:", error);
+  }
+};
+
+// Transform VendorFormData to Vendor
+const transformFormDataToVendor = (formData: VendorFormData): Vendor => {
+  // New vendors start with 0 purchases and outstanding balance
+  const iconBgColors: Array<
+    | "blue"
+    | "green"
+    | "purple"
+    | "orange"
+    | "pink"
+    | "indigo"
+    | "teal"
+    | "yellow"
+    | "gray"
+    | "red"
+  > = [
+    "blue",
+    "green",
+    "purple",
+    "orange",
+    "pink",
+    "indigo",
+    "teal",
+    "yellow",
+    "gray",
+    "red",
+  ];
+
+  // Assign icon color based on category or random
+  const categoryIndex = formData.category.length % iconBgColors.length;
+  const iconBgColor = iconBgColors[categoryIndex];
+
+  return {
+    companyName: formData.companyName.trim(),
+    category: formData.category,
+    status: formData.status,
+    phone: formData.phone.trim(),
+    email: formData.email.trim(),
+    location: formData.address.trim(),
+    totalPurchases: "₱0",
+    outstanding: "₱0",
+    iconBgColor,
+  };
 };
 
 const vendorCardConfig: VendorCardConfig[] = [
@@ -106,54 +255,126 @@ interface Vendor {
     | "red";
 }
 
-const vendors: Vendor[] = [
-  {
-    companyName: "Tech Supplies Inc.",
-    category: "Electronics",
-    status: "Active",
-    phone: "+63 917 123 4567",
-    email: "john@techsupplies.ph",
-    location: "Makati City, Metro Manila",
-    totalPurchases: "₱2,500,000",
-    outstanding: "₱250,000",
-    iconBgColor: "blue",
-  },
-  {
-    companyName: "Office Solutions Co.",
-    category: "Office Supplies",
-    status: "Active",
-    phone: "+63 917 234 5678",
-    email: "info@officesolutions.ph",
-    location: "Quezon City, Metro Manila",
-    totalPurchases: "₱1,800,000",
-    outstanding: "₱68,500",
-    iconBgColor: "green",
-  },
-  {
-    companyName: "Industrial Parts Ltd.",
-    category: "Manufacturing",
-    status: "Active",
-    phone: "+63 917 345 6789",
-    email: "sales@industrialparts.ph",
-    location: "Pasig City, Metro Manila",
-    totalPurchases: "₱950,000",
-    outstanding: "₱0",
-    iconBgColor: "purple",
-  },
-  {
-    companyName: "Global Trading Corp.",
-    category: "General Merchandise",
-    status: "Inactive",
-    phone: "+63 917 456 7890",
-    email: "contact@globaltrading.ph",
-    location: "Taguig City, Metro Manila",
-    totalPurchases: "₱320,000",
-    outstanding: "₱0",
-    iconBgColor: "orange",
-  },
-];
-
 export function VendorsPage() {
+  // Load vendors from localStorage on mount
+  const [vendors, setVendors] = useState<Vendor[]>(() =>
+    loadVendorsFromStorage()
+  );
+
+  const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
+
+  // Calculate vendor counts dynamically
+  const vendorCounts = useMemo(() => {
+    const formatCurrency = (amount: number): string => {
+      return `₱${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    };
+
+    const parseCurrency = (value: string | undefined | null) => {
+      if (!value || typeof value !== "string") return 0;
+      return parseFloat(value.replace(/[₱,]/g, "")) || 0;
+    };
+
+    const totalVendors = vendors.length;
+
+    const totalPurchases = vendors.reduce(
+      (sum, vendor) => sum + parseCurrency(vendor.totalPurchases),
+      0
+    );
+
+    const outstandingBalance = vendors.reduce(
+      (sum, vendor) => sum + parseCurrency(vendor.outstanding),
+      0
+    );
+
+    // Find top vendor by total purchases
+    const topVendor =
+      vendors.length > 0
+        ? vendors.reduce((top, vendor) => {
+            const topPurchases = parseCurrency(top.totalPurchases);
+            const vendorPurchases = parseCurrency(vendor.totalPurchases);
+            return vendorPurchases > topPurchases ? vendor : top;
+          })
+        : null;
+
+    return {
+      totalVendors: totalVendors.toString(),
+      totalPurchases: formatCurrency(totalPurchases),
+      outstandingBalance: formatCurrency(outstandingBalance),
+      topVendor: topVendor?.companyName || "N/A",
+    };
+  }, [vendors]);
+
+  // Update card config with dynamic subtitles
+  const vendorCardConfigWithSubtitle = useMemo(() => {
+    const activeVendors = vendors.filter((v) => v.status === "Active").length;
+    const parseCurrency = (value: string | undefined | null) => {
+      if (!value || typeof value !== "string") return 0;
+      return parseFloat(value.replace(/[₱,]/g, "")) || 0;
+    };
+    const topVendor =
+      vendors.length > 0
+        ? vendors.reduce((top, vendor) => {
+            const topPurchases = parseCurrency(top.totalPurchases);
+            const vendorPurchases = parseCurrency(vendor.totalPurchases);
+            return vendorPurchases > topPurchases ? vendor : top;
+          })
+        : null;
+    const topVendorPurchases = topVendor
+      ? parseCurrency(topVendor.totalPurchases)
+      : 0;
+    const topVendorFormatted =
+      topVendorPurchases >= 1000000
+        ? `₱${(topVendorPurchases / 1000000).toFixed(1)}M`
+        : `₱${(topVendorPurchases / 1000).toFixed(0)}K`;
+
+    return vendorCardConfig.map((config) => {
+      // Keep original subtitles but update dynamic ones
+      if (config.dataKey === "totalVendors") {
+        return { ...config, subtitle: `${activeVendors} active vendors` };
+      } else if (config.dataKey === "topVendor") {
+        return { ...config, subtitle: `${topVendorFormatted} purchases` };
+      }
+      // Keep original subtitle for other cards (totalPurchases: "year to date", outstandingBalance: "amount owed")
+      return config;
+    });
+  }, [vendors]);
+
+  // Handle vendor submission
+  const handleVendorSubmit = (data: VendorFormData) => {
+    try {
+      // Transform form data to vendor format
+      const newVendor = transformFormDataToVendor(data);
+
+      // Add new vendor to the beginning of the list
+      const updatedVendors = [newVendor, ...vendors];
+
+      // Save to localStorage
+      saveVendorsToStorage(updatedVendors);
+
+      // Update state to trigger re-render
+      setVendors(updatedVendors);
+
+      // Show success toast
+      toast.success("Vendor Added Successfully", {
+        description: `${newVendor.companyName} has been added.`,
+        duration: 3000,
+      });
+
+      console.log("Vendor added successfully:", newVendor);
+    } catch (error) {
+      console.error("Error adding vendor:", error);
+      // Show error toast
+      toast.error("Failed to Add Vendor", {
+        description:
+          "An error occurred while adding the vendor. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
   const handleViewDetails = (vendorName: string) => {
     console.log(`View details for ${vendorName}`);
   };
@@ -165,7 +386,7 @@ export function VendorsPage() {
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {vendorCardConfig.map((config) => (
+        {vendorCardConfigWithSubtitle.map((config) => (
           <SimpleCard
             key={config.dataKey}
             title={config.title}
@@ -192,6 +413,7 @@ export function VendorsPage() {
           add={false}
           addVendor={true}
           addVendorOrder={1}
+          onAddVendorClick={() => setIsAddVendorOpen(true)}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -212,6 +434,14 @@ export function VendorsPage() {
           />
         ))}
       </div>
+
+      {/* Add Vendor Dialog */}
+      <AddVendorDialog
+        open={isAddVendorOpen}
+        onOpenChange={setIsAddVendorOpen}
+        title="Add Vendor"
+        onSubmit={handleVendorSubmit}
+      />
     </div>
   );
 }

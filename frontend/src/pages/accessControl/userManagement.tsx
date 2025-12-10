@@ -1,7 +1,14 @@
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { ApiResponse } from "@/lib/types";
+import { useSearchStore } from "@/stores/search";
 import { AppButtons } from "@/components/app-Buttons";
 import { AppSearch } from "@/components/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
+import { AddUserDialog } from "@/components/add-user-dialog";
+import { UserFormData } from "@/stores/userManagement";
 import {
   Users,
   UserCheck,
@@ -45,12 +52,6 @@ interface UserCardConfig {
     | "red";
 }
 
-const userCounts: UserCounts = {
-  totalUsers: "5",
-  activeUsers: "5",
-  inactiveUsers: "0",
-  rolesDefined: "5",
-};
 
 const userCardConfig: UserCardConfig[] = [
   {
@@ -87,81 +88,82 @@ const userCardConfig: UserCardConfig[] = [
   },
 ];
 
-interface User {
-  id: string;
-  username: string;
-  fullName: string;
-  email: string;
-  role: string;
-  status: "Active" | "Inactive";
-  lastLogin: string;
+interface Permission {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  pivot: {
+    role_id: number;
+    permission_id: number;
+  };
 }
 
-const users: User[] = [
-  {
-    id: "1",
-    username: "johndoe",
-    fullName: "John Doe",
-    email: "john.doe@example.com",
-    role: "Administrator",
-    status: "Active",
-    lastLogin: "2024-12-10 09:30 AM",
-  },
-  {
-    id: "2",
-    username: "janesmith",
-    fullName: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "Manager",
-    status: "Active",
-    lastLogin: "2024-12-10 08:15 AM",
-  },
-  {
-    id: "3",
-    username: "mikejohnson",
-    fullName: "Mike Johnson",
-    email: "mike.johnson@example.com",
-    role: "User",
-    status: "Active",
-    lastLogin: "2024-12-09 04:20 PM",
-  },
-  {
-    id: "4",
-    username: "sarahwilliams",
-    fullName: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    role: "Editor",
-    status: "Active",
-    lastLogin: "2024-12-10 10:45 AM",
-  },
-  {
-    id: "5",
-    username: "davidbrown",
-    fullName: "David Brown",
-    email: "david.brown@example.com",
-    role: "Viewer",
-    status: "Active",
-    lastLogin: "2024-12-09 02:10 PM",
-  },
-];
+interface Role {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  pivot: {
+    user_id: number;
+    role_id: number;
+  };
+  permissions: Permission[];
+}
 
-const userColumns: ColumnDef<User>[] = [
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at?: string;
+  created_at: string;
+  updated_at: string;
+  roles: Role[];
+}
+
+interface UsersData {
+  users: User[];
+  pagination: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+interface RoleOption {
+  id: number;
+  name: string;
+}
+
+
+// Transform User to table row format
+const transformUserForTable = (user: User) => {
+  return {
+    id: user.id.toString(),
+    name: user.name,
+    email: user.email,
+    roles: user.roles.map((role) => role.name).join(", ") || "No roles",
+    status: user.email_verified_at ? "Active" : "Inactive",
+    created_at: new Date(user.created_at).toLocaleDateString(),
+  };
+};
+
+type UserTableRow = ReturnType<typeof transformUserForTable>;
+
+const userColumns: ColumnDef<UserTableRow>[] = [
   {
-    header: "Username",
-    accessor: "username",
+    header: "Name",
+    accessor: "name",
     className: "font-medium",
-  },
-  {
-    header: "Full Name",
-    accessor: "fullName",
   },
   {
     header: "Email",
     accessor: "email",
   },
   {
-    header: "Role",
-    accessor: "role",
+    header: "Roles",
+    accessor: "roles",
   },
   {
     header: "Status",
@@ -173,39 +175,230 @@ const userColumns: ColumnDef<User>[] = [
     },
   },
   {
-    header: "Last Login",
-    accessor: "lastLogin",
+    header: "Created",
+    accessor: "created_at",
   },
 ];
 
-const userActions: ActionItem<User>[] = [
-  {
-    label: "View",
-    icon: Eye,
-    onClick: (record) => {
-      console.log("View user:", record);
-    },
-  },
-  {
-    label: "Edit",
-    icon: Edit,
-    onClick: (record) => {
-      console.log("Edit user:", record);
-    },
-  },
-  {
-    label: "Delete",
-    icon: Trash2,
-    onClick: (record) => {
-      console.log("Delete user:", record);
-    },
-    variant: "destructive",
-  },
-];
 
 export function UserManagementTab() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const { query: searchQuery } = useSearchStore();
+
+  // Fetch users from API
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = searchQuery ? { search: searchQuery } : {};
+      const response = await api.get<ApiResponse<UsersData>>("/api/users", {
+        params,
+      });
+      if (response.data.success && response.data.data) {
+        setUsers(response.data.data.users);
+        setError(null);
+      } else {
+        setError(response.data.message || "Failed to load users");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
+
+  // Fetch roles from API
+  const fetchRoles = useCallback(async () => {
+    try {
+      const response = await api.get<ApiResponse<RoleOption[]>>("/api/roles");
+      if (response.data.success && response.data.data) {
+        setRoles(response.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch roles:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchRoles();
+  }, [fetchUsers, fetchRoles]);
+
+  // Calculate user counts dynamically
+  const userCounts = useMemo(() => {
+    const totalUsers = users.length;
+    const activeUsers = users.filter((u) => u.email_verified_at).length;
+    const inactiveUsers = totalUsers - activeUsers;
+    
+    // Get unique roles from all users
+    const uniqueRoles = new Set<number>();
+    users.forEach((user) => {
+      user.roles.forEach((role) => uniqueRoles.add(role.id));
+    });
+    const rolesDefined = uniqueRoles.size;
+
+    return {
+      totalUsers: totalUsers.toString(),
+      activeUsers: activeUsers.toString(),
+      inactiveUsers: inactiveUsers.toString(),
+      rolesDefined: rolesDefined.toString(),
+    };
+  }, [users]);
+
+  // Transform users for table
+  const tableData = useMemo(() => {
+    return users.map(transformUserForTable);
+  }, [users]);
+
+  // Handle user creation
+  const handleUserSubmit = async (data: UserFormData) => {
+    try {
+      // Create user with password confirmation
+      const createPayload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        password_confirmation: data.password_confirmation,
+      };
+
+      const response = await api.post<ApiResponse<User>>(
+        "/api/users",
+        createPayload
+      );
+
+      if (response.data.success && response.data.data) {
+        const newUser = response.data.data;
+
+        // Assign roles if any are selected
+        if (data.role_ids.length > 0) {
+          try {
+            await api.post(`/api/users/${newUser.id}/roles`, {
+              roles: data.role_ids,
+            });
+          } catch (roleErr) {
+            console.error("Failed to assign roles:", roleErr);
+            toast.warning("Roles Not Assigned", {
+              description:
+                "User created successfully but failed to assign roles. Please edit the user to assign roles.",
+              duration: 5000,
+            });
+          }
+        }
+
+        toast.success("User Created Successfully", {
+          description: `${data.name} has been created.`,
+          duration: 3000,
+        });
+
+        // Refresh users list
+        fetchUsers();
+      } else {
+        const errorMsg = response.data.message || "Failed to create user";
+        setError(errorMsg);
+        toast.error("Failed to Create User", {
+          description: errorMsg,
+          duration: 4000,
+        });
+      }
+    } catch (err: any) {
+      if (err.response?.data?.errors) {
+        const errorMessages = Object.values(err.response.data.errors)
+          .flat()
+          .join(", ");
+        setError(errorMessages);
+        toast.error("Validation Error", {
+          description: errorMessages,
+          duration: 4000,
+        });
+      } else {
+        const errorMsg =
+          err instanceof Error ? err.message : "Failed to create user";
+        setError(errorMsg);
+        toast.error("Failed to Create User", {
+          description: errorMsg,
+          duration: 4000,
+        });
+      }
+    }
+  };
+
+  // Handle user deletion
+  const handleDelete = async (userId: number) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      const response = await api.delete<ApiResponse<void>>(
+        `/api/users/${userId}`
+      );
+      if (response.data.success) {
+        setError(null);
+        toast.success("User Deleted Successfully", {
+          description: "User has been deleted.",
+          duration: 3000,
+        });
+        fetchUsers();
+      } else {
+        const errorMsg = response.data.message || "Failed to delete user";
+        setError(errorMsg);
+        toast.error("Failed to Delete User", {
+          description: errorMsg,
+          duration: 4000,
+        });
+      }
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to delete user";
+      setError(errorMsg);
+      toast.error("Failed to Delete User", {
+        description: errorMsg,
+        duration: 4000,
+      });
+    }
+  };
+
+  // User actions
+  const userActions: ActionItem<UserTableRow>[] = useMemo(
+    () => [
+      {
+        label: "View",
+        icon: Eye,
+        onClick: (record) => {
+          console.log("View user:", record);
+        },
+      },
+      {
+        label: "Edit",
+        icon: Edit,
+        onClick: (record) => {
+          console.log("Edit user:", record);
+        },
+      },
+      {
+        label: "Delete",
+        icon: Trash2,
+        onClick: (record) => {
+          const user = users.find((u) => u.id.toString() === record.id);
+          if (user) {
+            handleDelete(user.id);
+          }
+        },
+        variant: "destructive",
+      },
+    ],
+    [users]
+  );
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
+      {error && (
+        <div className="bg-destructive/15 text-destructive border border-destructive/50 rounded-md p-4">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {userCardConfig.map((config) => (
           <SimpleCard
@@ -233,19 +426,35 @@ export function UserManagementTab() {
           add={false}
           addUser={true}
           addUserOrder={1}
+          onAddUserClick={() => setIsAddUserOpen(true)}
         />
       </div>
       <div className="w-full">
-        <AppTable
-          data={users}
-          columns={userColumns}
-          actions={userActions}
-          itemsPerPage={5}
-          caption="User Management"
-          minWidth="1000px"
-          getRowId={(row) => row.id}
-        />
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading users...
+          </div>
+        ) : (
+          <AppTable
+            data={tableData}
+            columns={userColumns}
+            actions={userActions}
+            itemsPerPage={10}
+            caption="User Management"
+            minWidth="1000px"
+            getRowId={(row) => row.id}
+          />
+        )}
       </div>
+
+      {/* Add User Dialog */}
+      <AddUserDialog
+        open={isAddUserOpen}
+        onOpenChange={setIsAddUserOpen}
+        title="Add User"
+        roles={roles}
+        onSubmit={handleUserSubmit}
+      />
     </div>
   );
 }
