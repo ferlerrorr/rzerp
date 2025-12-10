@@ -45,4 +45,7 @@ export default defineConfig({
       "/sanctum/csrf-cookie": createProxyConfig(),
     },
   },
+  preview: {
+    allowedHosts: ["rz-erp.socia-dev.com", "localhost", "127.0.0.1"],
+  },
 });
