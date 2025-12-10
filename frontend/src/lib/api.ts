@@ -2,6 +2,21 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../stores/auth";
 import { getCookie, isAuthEndpoint } from "./utils";
 
+// Environment configuration
+// Set to 'local' for local development or 'staging' for staging environment
+// You can set VITE_ENVIRONMENT=staging in your .env file or vite.config.ts
+const ENVIRONMENT: "local" | "staging" =
+  (import.meta.env.VITE_ENVIRONMENT as "local" | "staging") || "local";
+
+const API_CONFIG = {
+  local: {
+    baseURL: "",
+  },
+  staging: {
+    baseURL: "https://rzerp-api.socia-dev.com",
+  },
+} as const;
+
 /**
  * Fetch CSRF cookie from backend
  */
@@ -26,7 +41,10 @@ export async function fetchCsrfCookie(): Promise<void> {
  * Axios instance with credentials and CSRF handling
  */
 export const api = axios.create({
-  baseURL: import.meta.env.DEV ? "" : import.meta.env.VITE_API_HOST || "",
+  baseURL:
+    import.meta.env.DEV
+      ? API_CONFIG[ENVIRONMENT]?.baseURL || ""
+      : import.meta.env.VITE_API_HOST || "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

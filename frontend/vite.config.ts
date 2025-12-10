@@ -13,6 +13,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
+        // Local: http://localhost:8000
+        // Staging: https://rzerp-api.socia-dev.com
         target:
           process.env.APP_TARGET ||
           process.env.LARAVEL_TARGET ||
@@ -31,6 +33,8 @@ export default defineConfig({
         },
       },
       "/csrf-cookie": {
+        // Local: http://localhost:8000
+        // Staging: https://rzerp-api.socia-dev.com
         target:
           process.env.APP_TARGET ||
           process.env.LARAVEL_TARGET ||
@@ -49,6 +53,8 @@ export default defineConfig({
         },
       },
       "/sanctum/csrf-cookie": {
+        // Local: http://localhost:8000
+        // Staging: https://rzerp-api.socia-dev.com
         target:
           process.env.APP_TARGET ||
           process.env.LARAVEL_TARGET ||
