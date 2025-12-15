@@ -21,6 +21,19 @@ class HandleCors
 
         $origin = $request->headers->get('Origin');
 
+        // Handle OPTIONS preflight requests
+        if ($request->getMethod() === 'OPTIONS') {
+            if (in_array($origin, $allowedOrigins)) {
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', $origin)
+                    ->header('Access-Control-Allow-Credentials', 'true')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-XSRF-TOKEN, X-Requested-With, Accept')
+                    ->header('Access-Control-Max-Age', '86400');
+            }
+            return response('', 200);
+        }
+
         if (in_array($origin, $allowedOrigins)) {
             return $next($request)
                 ->header('Access-Control-Allow-Origin', $origin)
