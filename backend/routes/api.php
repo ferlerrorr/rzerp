@@ -32,16 +32,19 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-    Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
     // Refresh doesn't require auth - it works with session cookie
     Route::post('/refresh', [AuthController::class, 'refresh']);
 });
 
 // User endpoint (matches frontend expectation)
-Route::get('/user', [AuthController::class, 'me'])->middleware('auth:sanctum');
+
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
+
+
+     Route::get('/user', [AuthController::class, 'me'])->middleware('auth:sanctum');
+    
     // HRIS routes with permission checks
     Route::prefix('hris')->group(function () {
         Route::get('/', [HrisController::class, 'index'])->middleware('permission:hris.view');
