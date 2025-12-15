@@ -255,7 +255,7 @@ interface Vendor {
     | "red";
 }
 
-export function VendorsPage() {
+export function VendorsTab() {
   // Load vendors from localStorage on mount
   const [vendors, setVendors] = useState<Vendor[]>(() =>
     loadVendorsFromStorage()

@@ -1,10 +1,10 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { VendorsPage } from "@/pages/vendors-page/vendors";
+import { AccountsPage } from "@/pages/accounts/accounts";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/vendors")({
+export const Route = createFileRoute("/accounts")({
   beforeLoad: async () => {
     await requireAuth();
   },
-  component: VendorsPage,
+  component: AccountsPage,
 });

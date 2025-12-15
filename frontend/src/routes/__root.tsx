@@ -69,6 +69,10 @@ function RootComponent() {
         title: "Access Control",
         description: "Manage user permissions and access rights",
       },
+      "/accounts": {
+        title: "Accounts",
+        description: "Manage payables and receivables in one place",
+      },
       "/settings": {
         title: "Settings",
         description: "Application settings and configuration",
@@ -95,6 +99,7 @@ function RootComponent() {
     "/finance",
     "/account-payable",
     "/account-receivable",
+    "/accounts",
     "/inventory",
     "/purchase-order",
     "/vendors",

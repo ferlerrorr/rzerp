@@ -1,20 +1,17 @@
-import * as React from "react";
 import { useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
   Building2,
   DollarSign,
-  ArrowDownLeft,
-  ArrowUpRight,
+  LayoutDashboard,
   Package,
-  ShoppingCart,
-  Store,
   Shield,
+  Store,
+  Wallet,
 } from "lucide-react";
+import * as React from "react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { useAuthStore } from "@/stores/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -22,67 +19,57 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useAuthStore } from "@/stores/auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const { user } = useAuthStore();
+  const isActivePath = (path: string) => pathname.startsWith(path);
 
   const navMain = [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      isActive: pathname === "/dashboard",
+      isActive: isActivePath("/dashboard"),
     },
     {
       title: "HRIS",
       url: "/hris",
       icon: Building2,
-      isActive: pathname === "/hris",
+      isActive: isActivePath("/hris"),
     },
     {
       title: "Finance",
       url: "/finance",
       icon: DollarSign,
-      isActive: pathname === "/finance",
+      isActive: isActivePath("/finance"),
     },
     {
-      title: "Account Payable",
-      url: "/account-payable",
-      icon: ArrowDownLeft,
-      isActive: pathname === "/account-payable",
-    },
-    {
-      title: "Account Receivable",
-      url: "/account-receivable",
-      icon: ArrowUpRight,
-      isActive: pathname === "/account-receivable",
+      title: "Accounts",
+      url: "/accounts",
+      icon: Wallet,
+      isActive: isActivePath("/accounts"),
     },
     {
       title: "Inventory",
       url: "/inventory",
       icon: Package,
-      isActive: pathname === "/inventory",
-    },
-    {
-      title: "Purchase order",
-      url: "/purchase-order",
-      icon: ShoppingCart,
-      isActive: pathname === "/purchase-order",
+      isActive: isActivePath("/inventory"),
     },
     {
       title: "Vendors",
       url: "/vendors",
       icon: Store,
-      isActive: pathname === "/vendors",
+      isActive: isActivePath("/vendors"),
     },
     {
       title: "Access Control",
       url: "/access-control",
       icon: Shield,
-      isActive: pathname === "/access-control",
+      isActive: isActivePath("/access-control"),
     },
   ];
 
@@ -99,8 +86,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       };
 
   return (
-    <Sidebar 
-      collapsible="icon" 
+    <Sidebar
+      collapsible="icon"
       className="!border-0 !border-r-0 !border-l-0 [&>div[data-sidebar='sidebar']]:!bg-white"
       {...props}
     >

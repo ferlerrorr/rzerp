@@ -1,15 +1,15 @@
-import { useState, useMemo } from "react";
-import { toast } from "sonner";
 import { AppButtons } from "@/components/app-Buttons";
 import { AppSearch } from "@/components/app-Serach";
-import { SimpleCard } from "@/components/card/simpleCard";
 import {
   PurchaseOrderCard,
   PurchaseOrderItem,
 } from "@/components/card/purchaseOrderCard";
+import { SimpleCard } from "@/components/card/simpleCard";
 import { CreatePODialog } from "@/components/create-po-dialog";
 import { PurchaseOrderFormData } from "@/stores/purchaseOrder";
-import { ShoppingCart, Calendar, Package, CheckCircle2 } from "lucide-react";
+import { Calendar, CheckCircle2, Package, ShoppingCart } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface PurchaseOrderCounts {
   totalPOs: string;
@@ -256,7 +256,7 @@ interface PurchaseOrder {
   notes?: string;
 }
 
-export function PurchaseOrderPage() {
+export function PurchaseOrderTab() {
   // Load purchase orders from localStorage on mount
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() =>
     loadPurchaseOrdersFromStorage()

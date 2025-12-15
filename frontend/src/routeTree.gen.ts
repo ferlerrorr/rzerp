@@ -18,6 +18,7 @@ import { Route as HrisRouteImport } from './routes/hris'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AccountReceivableRouteImport } from './routes/account-receivable'
+import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as AccountPayableRouteImport } from './routes/account-payable'
 import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as IndexRouteImport } from './routes/index'
@@ -68,6 +69,11 @@ const AccountReceivableRoute = AccountReceivableRouteImport.update({
   path: '/account-receivable',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountsRoute = AccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountPayableRoute = AccountPayableRouteImport.update({
   id: '/account-payable',
   path: '/account-payable',
@@ -92,6 +98,7 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/accounts': typeof AccountsRoute
   '/account-payable': typeof AccountPayableRoute
   '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/accounts': typeof AccountsRoute
   '/account-payable': typeof AccountPayableRoute
   '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/accounts': typeof AccountsRoute
   '/account-payable': typeof AccountPayableRoute
   '/account-receivable': typeof AccountReceivableRoute
   '/dashboard': typeof DashboardRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/access-control'
+    | '/accounts'
     | '/account-payable'
     | '/account-receivable'
     | '/dashboard'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/access-control'
+    | '/accounts'
     | '/account-payable'
     | '/account-receivable'
     | '/dashboard'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/access-control'
+    | '/accounts'
     | '/account-payable'
     | '/account-receivable'
     | '/dashboard'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
+  AccountsRoute: typeof AccountsRoute
   AccountPayableRoute: typeof AccountPayableRoute
   AccountReceivableRoute: typeof AccountReceivableRoute
   DashboardRoute: typeof DashboardRoute
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/vendors'
       fullPath: '/vendors'
       preLoaderRoute: typeof VendorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounts': {
+      id: '/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/users': {
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
+  AccountsRoute: AccountsRoute,
   AccountPayableRoute: AccountPayableRoute,
   AccountReceivableRoute: AccountReceivableRoute,
   DashboardRoute: DashboardRoute,
