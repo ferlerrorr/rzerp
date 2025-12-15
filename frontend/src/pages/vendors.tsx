@@ -1,6 +1,6 @@
-import { AddVendorDialog } from "@/components/add-vendor-dialog";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AddVendorDialog } from "@/components/dialogs/add-vendor-dialog";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { VendorCard } from "@/components/card/vendorCard";
 import { VendorFormData } from "@/stores/vendor";

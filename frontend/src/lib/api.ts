@@ -41,10 +41,9 @@ export async function fetchCsrfCookie(): Promise<void> {
  * Axios instance with credentials and CSRF handling
  */
 export const api = axios.create({
-  baseURL:
-    import.meta.env.DEV
-      ? API_CONFIG[ENVIRONMENT]?.baseURL || ""
-      : import.meta.env.VITE_API_HOST || "",
+  baseURL: import.meta.env.DEV
+    ? API_CONFIG[ENVIRONMENT]?.baseURL || ""
+    : import.meta.env.VITE_API_HOST || "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -141,3 +140,182 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ============================================================================
+// Employee API Functions
+// ============================================================================
+
+/**
+ * Get list of employees with optional filters and pagination
+ * GET /api/employees?per_page=15&search=...
+ */
+export async function getEmployees(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.department) params.department = filters.department;
+  if (filters?.position) params.position = filters.position;
+  if (filters?.employment_type)
+    params.employment_type = filters.employment_type;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/employees", { params });
+  return response.data;
+}
+
+/**
+ * Get a single employee by ID
+ * GET /api/employees/{id}
+ */
+export async function getEmployee(id: number) {
+  const response = await api.get(`/api/employees/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new employee
+ * POST /api/employees
+ */
+export async function createEmployee(data: Record<string, any>) {
+  const response = await api.post("/api/employees", data);
+  return response.data;
+}
+
+/**
+ * Update an employee
+ * PUT /api/employees/{id}
+ */
+export async function updateEmployee(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/employees/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete an employee
+ * DELETE /api/employees/{id}
+ */
+export async function deleteEmployee(id: number) {
+  const response = await api.delete(`/api/employees/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Department API Functions
+// ============================================================================
+
+/**
+ * Get list of departments with optional filters and pagination
+ * GET /api/departments?per_page=15&search=...
+ */
+export async function getDepartments(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/departments", { params });
+  return response.data;
+}
+
+/**
+ * Get a single department by ID
+ * GET /api/departments/{id}
+ */
+export async function getDepartment(id: number) {
+  const response = await api.get(`/api/departments/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new department
+ * POST /api/departments
+ */
+export async function createDepartment(data: Record<string, any>) {
+  const response = await api.post("/api/departments", data);
+  return response.data;
+}
+
+/**
+ * Update a department
+ * PUT /api/departments/{id}
+ */
+export async function updateDepartment(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/departments/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a department
+ * DELETE /api/departments/{id}
+ */
+export async function deleteDepartment(id: number) {
+  const response = await api.delete(`/api/departments/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Position API Functions
+// ============================================================================
+
+/**
+ * Get list of positions with optional filters and pagination
+ * GET /api/positions?per_page=15&search=...
+ */
+export async function getPositions(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.department_id) params.department_id = filters.department_id;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/positions", { params });
+  return response.data;
+}
+
+/**
+ * Get a single position by ID
+ * GET /api/positions/{id}
+ */
+export async function getPosition(id: number) {
+  const response = await api.get(`/api/positions/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new position
+ * POST /api/positions
+ */
+export async function createPosition(data: Record<string, any>) {
+  const response = await api.post("/api/positions", data);
+  return response.data;
+}
+
+/**
+ * Update a position
+ * PUT /api/positions/{id}
+ */
+export async function updatePosition(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/positions/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a position
+ * DELETE /api/positions/{id}
+ */
+export async function deletePosition(id: number) {
+  const response = await api.delete(`/api/positions/${id}`);
+  return response.data;
+}

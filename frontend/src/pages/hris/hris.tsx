@@ -1,6 +1,8 @@
-import { AppTabs } from "@/components/app-Tabs";
+import { AppTabs } from "@/components/common/app-Tabs";
 import { EmployeesTab } from "./employees";
 import { AttendanceTab } from "./attendance";
+import { DepartmentTab } from "./department";
+import { PositionTab } from "./position";
 import { LeaveTab } from "./leave";
 import { PayrollTab } from "./payroll";
 import { BenefitsTab } from "./benefits";
@@ -17,6 +19,16 @@ export function HrisPage() {
       value: "attendance",
       label: "Attendance",
       content: <AttendanceTab />,
+    },
+    {
+      value: "department",
+      label: "Department",
+      content: <DepartmentTab />,
+    },
+    {
+      value: "position",
+      label: "Position",
+      content: <PositionTab />,
     },
     {
       value: "leave",
@@ -46,7 +58,7 @@ export function HrisPage() {
         className="mt-4"
         tabs={tabs}
         defaultValue="employees"
-        tabsListClassName="sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
+        tabsListClassName="sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-8"
       />
     </div>
   );

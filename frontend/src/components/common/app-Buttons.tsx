@@ -1,6 +1,6 @@
 import { Funnel, Plus } from "lucide-react";
-import { Button } from "./ui/button";
-import { ButtonProps } from "./ui/button";
+import { Button } from "@/components/ui/button";
+import { ButtonProps } from "@/components/ui/button";
 
 interface AppButtonsProps {
   filter?: boolean;

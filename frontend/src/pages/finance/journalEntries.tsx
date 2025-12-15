@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { JournalEntryDialog } from "@/components/journal-entry-dialog";
+import { JournalEntryDialog } from "@/components/dialogs/journal-entry-dialog";
 import { JournalEntryFormData } from "@/stores/journalEntry";
 import {
   FileText,

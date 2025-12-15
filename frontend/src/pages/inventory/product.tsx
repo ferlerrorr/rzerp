@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { AddProductDialog } from "@/components/add-product-dialog";
+import { AddProductDialog } from "@/components/dialogs/add-product-dialog";
 import { ProductFormData } from "@/stores/product";
 import {
   Package,

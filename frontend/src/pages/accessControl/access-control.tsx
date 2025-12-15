@@ -1,4 +1,4 @@
-import { AppTabs } from "@/components/app-Tabs";
+import { AppTabs } from "@/components/common/app-Tabs";
 import { UserManagementTab } from "./userManagement";
 import { RolesTab } from "./roles";
 import { PermissionsTab } from "./permissions";

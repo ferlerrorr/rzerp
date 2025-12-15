@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreVertical, LucideIcon } from "lucide-react";
-import { AppPagination } from "@/components/app-Pagination";
+import { AppPagination } from "@/components/common/app-Pagination";
 
 export interface ColumnDef<T> {
   header: string;

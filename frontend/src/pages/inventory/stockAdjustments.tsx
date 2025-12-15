@@ -1,5 +1,5 @@
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
 import { Clock, CheckCircle2, FileEdit, Eye, Edit, Trash2 } from "lucide-react";

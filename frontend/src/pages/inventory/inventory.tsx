@@ -1,4 +1,4 @@
-import { AppTabs } from "@/components/app-Tabs";
+import { AppTabs } from "@/components/common/app-Tabs";
 import { ProductTab } from "./product";
 import { StockMovementsTab } from "./stockMovements";
 import { StockAdjustmentsTab } from "./stockAdjustments";

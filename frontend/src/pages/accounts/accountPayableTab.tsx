@@ -1,6 +1,6 @@
-import { AddInvoiceDialog, Vendor } from "@/components/add-invoice-dialog";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AddInvoiceDialog, Vendor } from "@/components/dialogs/add-invoice-dialog";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { ActionItem, AppTable, ColumnDef } from "@/components/table/appTable";
 import { InvoiceFormData } from "@/stores/invoice";

@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { CreateInvoiceDialog } from "@/components/create-invoice-dialog";
-import { RecordPaymentDialog } from "@/components/record-payment-dialog";
+import { CreateInvoiceDialog } from "@/components/dialogs/create-invoice-dialog";
+import { RecordPaymentDialog } from "@/components/dialogs/record-payment-dialog";
 import { ReceivableInvoiceFormData } from "@/stores/receivableInvoice";
 import {
   DollarSign,

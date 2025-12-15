@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef } from "@/components/table/appTable";
-import { AddAccountDialog } from "@/components/add-account-dialog";
+import { AddAccountDialog } from "@/components/dialogs/add-account-dialog";
 import { AccountFormData, AccountType } from "@/stores/account";
 import {
   Building2,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
 import { useSearchStore } from "@/stores/search";
 
 export function AppSearch() {

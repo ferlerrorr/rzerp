@@ -1,8 +1,8 @@
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
-import { CreateInvoiceDialog } from "@/components/create-invoice-dialog";
-import { RecordPaymentDialog } from "@/components/record-payment-dialog";
+import { CreateInvoiceDialog } from "@/components/dialogs/create-invoice-dialog";
+import { RecordPaymentDialog } from "@/components/dialogs/record-payment-dialog";
 import { ActionItem, AppTable, ColumnDef } from "@/components/table/appTable";
 import { ReceivableInvoiceFormData } from "@/stores/receivableInvoice";
 import {

@@ -1,4 +1,4 @@
-import { AppTabs } from "@/components/app-Tabs";
+import { AppTabs } from "@/components/common/app-Tabs";
 import { OverviewTab } from "./overview";
 import { GeneralLedgerTab } from "./generalLedger";
 import { JournalEntriesTab } from "./journalEntries";
@@ -34,8 +34,8 @@ export function FinancePage() {
       content: <BudgetTab />,
     },
     {
-      value: "tas-bir",
-      label: "TAS & BIR",
+      value: "ta-bir",
+      label: "TAX & BIR",
       content: <TasBirTab />,
     },
   ];

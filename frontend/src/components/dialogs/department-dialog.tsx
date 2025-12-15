@@ -12,63 +12,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useRoleStore, RoleFormData } from "@/stores/role";
+import { useDepartmentStore, DepartmentFormData } from "@/stores/department";
 
-export interface AddRoleDialogProps {
+export interface DepartmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
-  permissions?: Array<{ id: number; name: string }>;
-  onSubmit?: (data: RoleFormData) => void;
+  onSubmit?: (data: DepartmentFormData) => void;
+  mode?: "create" | "edit";
+  departmentId?: number;
 }
 
-export function AddRoleDialog({
+export function DepartmentDialog({
   open,
   onOpenChange,
-  title = "Add Role",
-  permissions = [],
+  title = "Add Department",
   onSubmit,
-}: AddRoleDialogProps) {
+  mode = "create",
+  departmentId,
+}: DepartmentDialogProps) {
   const {
     formData,
     errors,
     updateField,
-    updatePermissionIds,
     setIsOpen,
     validateForm,
+    loading,
+    getDepartment,
+    loadDepartmentForEdit,
     resetForm,
-  } = useRoleStore();
+  } = useDepartmentStore();
 
   // Sync dialog open state with store
   useEffect(() => {
     setIsOpen(open);
-  }, [open, setIsOpen]);
+    if (!open) {
+      resetForm();
+    }
+  }, [open, setIsOpen, resetForm]);
 
-  const handleChange = (
-    field: keyof Omit<RoleFormData, "permission_ids">,
-    value: string
-  ) => {
+  // Load department data when editing
+  useEffect(() => {
+    if (open && mode === "edit" && departmentId) {
+      getDepartment(departmentId).then((department) => {
+        if (department) {
+          loadDepartmentForEdit(department);
+        }
+      });
+    } else if (open && mode === "create") {
+      resetForm();
+    }
+  }, [open, mode, departmentId, getDepartment, loadDepartmentForEdit, resetForm]);
+
+  const handleChange = (field: keyof DepartmentFormData, value: string) => {
     updateField(field, value);
   };
 
-  const handlePermissionToggle = (permissionId: number, checked: boolean) => {
-    const currentPermissionIds = formData.permission_ids;
-    if (checked) {
-      updatePermissionIds([...currentPermissionIds, permissionId]);
-    } else {
-      updatePermissionIds(
-        currentPermissionIds.filter((id) => id !== permissionId)
-      );
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      // Call onSubmit and wait for it to complete
+      await onSubmit?.(formData);
+      // Only close dialog if there are no errors (success case)
+      // The onSubmit handler will handle closing on success
     }
   };
 
@@ -86,24 +92,21 @@ export function AddRoleDialog({
           className="flex-1 overflow-y-auto scrollbar-thin"
         >
           <div className="px-6 py-4 space-y-6">
-            {/* Role Name */}
+            {/* Department Name */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm">
-                Role Name <span className="text-destructive">*</span>
+                Department Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="e.g., admin, manager, editor"
+                placeholder="e.g., IT, Human Resources, Sales"
                 className={errors.name ? "border-destructive" : ""}
               />
               {errors.name && (
                 <p className="text-xs text-destructive">{errors.name}</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Use lowercase letters, numbers, hyphens, or underscores only
-              </p>
             </div>
 
             {/* Description */}
@@ -115,39 +118,13 @@ export function AddRoleDialog({
                 id="description"
                 value={formData.description}
                 onChange={(e) => handleChange("description", e.target.value)}
-                placeholder="Enter role description (optional)"
-                rows={3}
+                placeholder="Enter department description (optional)"
+                rows={4}
+                className={errors.description ? "border-destructive" : ""}
               />
-            </div>
-
-            {/* Permissions */}
-            <div className="space-y-2">
-              <Label className="text-sm">Permissions</Label>
-              <div className="space-y-2 border border-border rounded-lg p-4 max-h-64 overflow-y-auto scrollbar-thin">
-                {permissions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No permissions available
-                  </p>
-                ) : (
-                  permissions.map((permission) => (
-                    <label
-                      key={permission.id}
-                      className="flex items-center space-x-2 cursor-pointer py-1"
-                    >
-                      <Checkbox
-                        checked={formData.permission_ids.includes(permission.id)}
-                        onCheckedChange={(checked) =>
-                          handlePermissionToggle(permission.id, checked === true)
-                        }
-                      />
-                      <span className="text-sm">{permission.name}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {errors.permission_ids && (
+              {errors.description && (
                 <p className="text-xs text-destructive">
-                  {errors.permission_ids}
+                  {errors.description}
                 </p>
               )}
             </div>
@@ -160,11 +137,17 @@ export function AddRoleDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto order-2 sm:order-1"
+            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit} variant="default">
-            Add Role
+          <Button
+            type="submit"
+            onClick={handleSubmit}
+            variant="default"
+            disabled={loading}
+          >
+            {loading ? "Submitting..." : mode === "edit" ? "Update Department" : "Create Department"}
           </Button>
         </DialogFooter>
       </DialogContent>

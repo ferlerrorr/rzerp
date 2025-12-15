@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { ProgressCard } from "@/components/card/progressCard";
 import {
@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { LeaveRequestDialog } from "@/components/leave-request-dialog";
+import { LeaveRequestDialog } from "@/components/dialogs/leave-request-dialog";
 import { LeaveRequestFormData } from "@/stores/leave";
 
 interface LeaveData {

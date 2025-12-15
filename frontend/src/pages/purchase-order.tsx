@@ -1,11 +1,11 @@
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import {
   PurchaseOrderCard,
   PurchaseOrderItem,
 } from "@/components/card/purchaseOrderCard";
 import { SimpleCard } from "@/components/card/simpleCard";
-import { CreatePODialog } from "@/components/create-po-dialog";
+import { CreatePODialog } from "@/components/dialogs/create-po-dialog";
 import { PurchaseOrderFormData } from "@/stores/purchaseOrder";
 import { Calendar, CheckCircle2, Package, ShoppingCart } from "lucide-react";
 import { useMemo, useState } from "react";

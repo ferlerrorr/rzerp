@@ -1,4 +1,4 @@
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef } from "@/components/table/appTable";
 import { Activity, CheckCircle, XCircle, Calendar } from "lucide-react";

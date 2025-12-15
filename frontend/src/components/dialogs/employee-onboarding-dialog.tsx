@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useEmployeeStore, EmployeeFormData } from "@/stores/employee";
+import { useDepartmentStore } from "@/stores/department";
+import { usePositionStore } from "@/stores/position";
 
 export interface EmployeeOnboardingDialogProps {
   open: boolean;
@@ -29,33 +31,9 @@ export interface EmployeeOnboardingDialogProps {
   departments?: string[];
   positions?: string[];
   employmentTypes?: string[];
+  mode?: "create" | "edit";
+  employeeId?: number;
 }
-
-const defaultDepartments = [
-  "IT",
-  "Human Resources",
-  "Sales",
-  "Finance",
-  "Marketing",
-  "Operations",
-  "Product",
-  "Design",
-];
-
-const defaultPositions = [
-  "Software Engineer",
-  "HR Manager",
-  "Sales Representative",
-  "Accountant",
-  "Marketing Specialist",
-  "Operations Manager",
-  "Product Manager",
-  "Designer",
-  "Developer",
-  "Analyst",
-  "Manager",
-  "Coordinator",
-];
 
 const defaultEmploymentTypes = ["Full-time", "Part-time", "Contract", "Intern"];
 
@@ -64,28 +42,143 @@ export function EmployeeOnboardingDialog({
   onOpenChange,
   title = "Add Employee",
   onSubmit,
-  departments = defaultDepartments,
-  positions = defaultPositions,
+  departments: propDepartments,
+  positions: propPositions,
   employmentTypes = defaultEmploymentTypes,
+  mode = "create",
+  employeeId,
 }: EmployeeOnboardingDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
-    useEmployeeStore();
+  const {
+    formData,
+    errors,
+    updateField,
+    setIsOpen,
+    validateForm,
+    loading,
+    getEmployee,
+    loadEmployeeForEdit,
+    resetForm,
+  } = useEmployeeStore();
+
+  const {
+    departments: departmentsFromAPI,
+    fetchDepartments,
+    setFilters: setDepartmentFilters,
+  } = useDepartmentStore();
+  const {
+    positions: positionsFromAPI,
+    fetchPositions,
+    setFilters: setPositionFilters,
+  } = usePositionStore();
+
+  // Fetch departments and positions when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Fetch all departments (set high per_page to get all records)
+      // Set filters first, then fetch (Zustand updates are synchronous)
+      setDepartmentFilters({ per_page: 1000, page: 1 });
+      // Fetch will use the updated filters via get() inside the function
+      fetchDepartments();
+
+      // Fetch all positions (set high per_page to get all records)
+      setPositionFilters({ per_page: 1000, page: 1 });
+      fetchPositions();
+    }
+  }, [
+    open,
+    fetchDepartments,
+    fetchPositions,
+    setDepartmentFilters,
+    setPositionFilters,
+  ]);
+
+  // Extract department names from API
+  const departments = useMemo(() => {
+    // Use props if provided (for backward compatibility)
+    if (propDepartments && propDepartments.length > 0) {
+      return propDepartments;
+    }
+    // Use API data, return empty array if no data yet
+    if (departmentsFromAPI.length === 0) {
+      return [];
+    }
+    return departmentsFromAPI.map((dept) => dept.name);
+  }, [propDepartments, departmentsFromAPI]);
+
+  // Extract position names from API, optionally filtered by selected department
+  const positions = useMemo(() => {
+    // Use props if provided (for backward compatibility)
+    if (propPositions && propPositions.length > 0) {
+      return propPositions;
+    }
+
+    // Return empty array if no data yet
+    if (positionsFromAPI.length === 0) {
+      return [];
+    }
+
+    // If a department is selected, filter positions by that department
+    if (formData.department) {
+      const selectedDept = departmentsFromAPI.find(
+        (dept) => dept.name === formData.department
+      );
+
+      if (selectedDept) {
+        const filtered = positionsFromAPI
+          .filter((pos) => pos.department_id === selectedDept.id)
+          .map((pos) => pos.name);
+        return filtered.length > 0
+          ? filtered
+          : positionsFromAPI.map((pos) => pos.name);
+      }
+    }
+
+    // Return all positions if no department is selected
+    return positionsFromAPI.map((pos) => pos.name);
+  }, [
+    propPositions,
+    positionsFromAPI,
+    formData.department,
+    departmentsFromAPI,
+  ]);
 
   // Sync dialog open state with store
   useEffect(() => {
     setIsOpen(open);
-  }, [open, setIsOpen]);
+    if (!open) {
+      resetForm();
+    }
+  }, [open, setIsOpen, resetForm]);
+
+  // Load employee data when editing
+  useEffect(() => {
+    if (open && mode === "edit" && employeeId) {
+      getEmployee(employeeId).then((employee) => {
+        if (employee) {
+          loadEmployeeForEdit(employee);
+        }
+      });
+    } else if (open && mode === "create") {
+      resetForm();
+    }
+  }, [open, mode, employeeId, getEmployee, loadEmployeeForEdit, resetForm]);
 
   const handleChange = (field: keyof EmployeeFormData, value: string) => {
     updateField(field, value);
+
+    // Reset position when department changes
+    if (field === "department" && formData.position) {
+      updateField("position", "");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      // Call onSubmit and wait for it to complete
+      await onSubmit?.(formData);
+      // Only close dialog if there are no errors (success case)
+      // The onSubmit handler will handle closing on success
     }
   };
 
@@ -437,20 +530,38 @@ export function EmployeeOnboardingDialog({
                   <Select
                     value={formData.department}
                     onValueChange={(value) => handleChange("department", value)}
+                    disabled={departments.length === 0}
                   >
                     <SelectTrigger
                       className={errors.department ? "border-destructive" : ""}
                     >
-                      <SelectValue placeholder="Select Department" />
+                      <SelectValue
+                        placeholder={
+                          departments.length === 0
+                            ? "No department available"
+                            : "Select Department"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
+                      {departments.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          No department available
+                        </div>
+                      ) : (
+                        departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
+                  {departments.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No departments found. Please add a department first.
+                    </p>
+                  )}
                   {errors.department && (
                     <p className="text-xs text-destructive">
                       {errors.department}
@@ -464,18 +575,31 @@ export function EmployeeOnboardingDialog({
                   <Select
                     value={formData.position}
                     onValueChange={(value) => handleChange("position", value)}
+                    disabled={positions.length === 0}
                   >
                     <SelectTrigger
                       className={errors.position ? "border-destructive" : ""}
                     >
-                      <SelectValue placeholder="Select Position" />
+                      <SelectValue
+                        placeholder={
+                          positions.length === 0
+                            ? "No position available"
+                            : "Select Position"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((pos) => (
-                        <SelectItem key={pos} value={pos}>
-                          {pos}
-                        </SelectItem>
-                      ))}
+                      {positions.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          No position available
+                        </div>
+                      ) : (
+                        positions.map((pos) => (
+                          <SelectItem key={pos} value={pos}>
+                            {pos}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {errors.position && (
@@ -646,11 +770,17 @@ export function EmployeeOnboardingDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto order-2 sm:order-1"
+            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit} variant="default">
-            Submit Onboarding
+          <Button
+            type="submit"
+            onClick={handleSubmit}
+            variant="default"
+            disabled={loading}
+          >
+            {loading ? "Submitting..." : "Submit Onboarding"}
           </Button>
         </DialogFooter>
       </DialogContent>

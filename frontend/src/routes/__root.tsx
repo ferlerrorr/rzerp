@@ -1,6 +1,6 @@
 import { DynamicBreadcrumb } from "@/components/breadcrumb/dynamic-breadcrumb";
 import { SiteHeader } from "@/components/navbar/site-header";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/common/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";

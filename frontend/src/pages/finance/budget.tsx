@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { CreateBudgetDialog } from "@/components/create-budget-dialog";
+import { CreateBudgetDialog } from "@/components/dialogs/create-budget-dialog";
 import { BudgetFormData } from "@/stores/budget";
 import { Wallet, TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";

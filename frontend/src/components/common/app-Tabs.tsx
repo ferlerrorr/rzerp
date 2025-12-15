@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useTabsStore } from "@/stores/tabs";
 
@@ -26,7 +26,7 @@ export function AppTabs({
 }: AppTabsProps) {
   const { activeTab, setActiveTab } = useTabsStore();
   const defaultTab = defaultValue || tabs[0]?.value;
-  
+
   // Check if current activeTab exists in current page's tabs
   const tabValues = tabs.map((tab) => tab.value);
   const isValidTab = activeTab && tabValues.includes(activeTab);

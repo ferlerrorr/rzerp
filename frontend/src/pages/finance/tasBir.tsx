@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { BirFormCard } from "@/components/card/birFormCard";
 import { IncomeStatement } from "@/components/card/incomeStatement";
-import { AppPagination } from "@/components/app-Pagination";
+import { AppPagination } from "@/components/common/app-Pagination";
 import { Receipt, FileText, Calculator, AlertCircle } from "lucide-react";
 
 interface TaxCounts {

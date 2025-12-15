@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { PayrollProcessingDialog } from "@/components/payroll-processing-dialog";
+import { PayrollProcessingDialog } from "@/components/dialogs/payroll-processing-dialog";
 import { PayrollFormData } from "@/stores/payroll";
 import { Eye, Edit, CheckCircle2, XCircle, Clock } from "lucide-react";
 

@@ -1,4 +1,4 @@
-import { AppTabs } from "@/components/app-Tabs";
+import { AppTabs } from "@/components/common/app-Tabs";
 import { AccountPayableTab } from "./accountPayableTab";
 import { AccountReceivableTab } from "./accountReceivableTab";
 

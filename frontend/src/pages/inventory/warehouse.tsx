@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { WarehouseCard } from "@/components/card/warehouseCard";
-import { AddWarehouseDialog } from "@/components/add-warehouse-dialog";
+import { AddWarehouseDialog } from "@/components/dialogs/add-warehouse-dialog";
 import { WarehouseFormData } from "@/stores/warehouse";
 
 interface Warehouse {

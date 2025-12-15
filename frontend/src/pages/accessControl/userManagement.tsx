@@ -3,11 +3,11 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ApiResponse } from "@/lib/types";
 import { useSearchStore } from "@/stores/search";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { AddUserDialog } from "@/components/add-user-dialog";
+import { AddUserDialog } from "@/components/dialogs/add-user-dialog";
 import { UserFormData } from "@/stores/userManagement";
 import {
   Users,

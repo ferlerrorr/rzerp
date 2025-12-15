@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   UsersRound,
   UserCheck,
@@ -10,13 +10,20 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppButtons } from "@/components/app-Buttons";
-import { AppSearch } from "@/components/app-Serach";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
-import { FilterDialog, FilterGroup } from "@/components/filter-dialog";
-import { EmployeeOnboardingDialog } from "@/components/employee-onboarding-dialog";
-import { EmployeeFormData } from "@/stores/employee";
+import { FilterDialog, FilterGroup } from "@/components/dialogs/filter-dialog";
+import { EmployeeOnboardingDialog } from "@/components/dialogs/employee-onboarding-dialog";
+import { EmployeeViewDialog } from "@/components/dialogs/employee-view-dialog";
+import { DeleteConfirmationDialog } from "@/components/dialogs/delete-confirmation-dialog";
+import {
+  EmployeeFormData,
+  useEmployeeStore,
+  EmployeeFromAPI,
+} from "@/stores/employee";
+import { useSearchStore } from "@/stores/search";
 
 interface EmployeesData {
   total_employees: number;
@@ -74,7 +81,7 @@ const cardConfig: CardConfig[] = [
   },
 ];
 
-// Employee interface
+// Employee interface for display
 interface Employee {
   id: string;
   name: string;
@@ -84,187 +91,31 @@ interface Employee {
   status: string;
 }
 
-// Default employee data - This would typically come from an API/database
-const defaultEmployees: Employee[] = [
-  {
-    id: "EMP001",
-    name: "John Doe",
-    position: "Software Engineer",
-    department: "IT",
-    salary: "$75,000",
-    status: "Active",
-  },
-  {
-    id: "EMP002",
-    name: "Jane Smith",
-    position: "HR Manager",
-    department: "Human Resources",
-    salary: "$65,000",
-    status: "Active",
-  },
-  {
-    id: "EMP003",
-    name: "Mike Johnson",
-    position: "Sales Representative",
-    department: "Sales",
-    salary: "$55,000",
-    status: "Active",
-  },
-  {
-    id: "EMP004",
-    name: "Sarah Williams",
-    position: "Accountant",
-    department: "Finance",
-    salary: "$60,000",
-    status: "Active",
-  },
-  {
-    id: "EMP005",
-    name: "David Brown",
-    position: "Marketing Specialist",
-    department: "Marketing",
-    salary: "$58,000",
-    status: "Active",
-  },
-  {
-    id: "EMP006",
-    name: "Emily Davis",
-    position: "Operations Manager",
-    department: "Operations",
-    salary: "$70,000",
-    status: "Active",
-  },
-  {
-    id: "EMP007",
-    name: "Robert Wilson",
-    position: "Product Manager",
-    department: "Product",
-    salary: "$80,000",
-    status: "Active",
-  },
-  {
-    id: "EMP008",
-    name: "Lisa Anderson",
-    position: "Designer",
-    department: "Design",
-    salary: "$62,000",
-    status: "Active",
-  },
-  {
-    id: "EMP009",
-    name: "Michael Chen",
-    position: "Developer",
-    department: "IT",
-    salary: "$72,000",
-    status: "Active",
-  },
-  {
-    id: "EMP010",
-    name: "Jessica Taylor",
-    position: "Analyst",
-    department: "Finance",
-    salary: "$59,000",
-    status: "Active",
-  },
-  {
-    id: "EMP011",
-    name: "Christopher Lee",
-    position: "Manager",
-    department: "Operations",
-    salary: "$85,000",
-    status: "Active",
-  },
-  {
-    id: "EMP012",
-    name: "Amanda White",
-    position: "Coordinator",
-    department: "HR",
-    salary: "$52,000",
-    status: "Active",
-  },
-];
-
-// LocalStorage key
-const EMPLOYEES_STORAGE_KEY = "rzerp_employees";
-const EMPLOYEE_COUNTER_KEY = "rzerp_employee_counter";
-
-// Helper functions for localStorage
-const loadEmployeesFromStorage = (): Employee[] => {
-  try {
-    const stored = localStorage.getItem(EMPLOYEES_STORAGE_KEY);
-    if (stored) {
-      const employees = JSON.parse(stored);
-      // Sort by employee ID when loading from storage (after refresh)
-      return sortEmployeesById(employees);
-    }
-    // Initialize with default employees if no data exists
-    const sortedDefault = sortEmployeesById(defaultEmployees);
-    saveEmployeesToStorage(sortedDefault);
-    // Initialize counter to 12 (since we have 12 default employees)
-    if (!localStorage.getItem(EMPLOYEE_COUNTER_KEY)) {
-      localStorage.setItem(EMPLOYEE_COUNTER_KEY, "12");
-    }
-    return sortedDefault;
-  } catch (error) {
-    console.error("Error loading employees from localStorage:", error);
-    return sortEmployeesById(defaultEmployees);
-  }
-};
-
-// Sort employees by ID (EMP001, EMP002, etc.)
-const sortEmployeesById = (employees: Employee[]): Employee[] => {
-  return [...employees].sort((a, b) => {
-    // Extract numeric part from ID (e.g., "EMP001" -> 1)
-    const numA = parseInt(a.id.replace("EMP", ""), 10);
-    const numB = parseInt(b.id.replace("EMP", ""), 10);
-    return numA - numB;
-  });
-};
-
-const saveEmployeesToStorage = (employees: Employee[]) => {
-  try {
-    localStorage.setItem(EMPLOYEES_STORAGE_KEY, JSON.stringify(employees));
-  } catch (error) {
-    console.error("Error saving employees to localStorage:", error);
-  }
-};
-
-const getNextEmployeeId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(EMPLOYEE_COUNTER_KEY) || "12",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(EMPLOYEE_COUNTER_KEY, nextCounter.toString());
-    return `EMP${nextCounter.toString().padStart(3, "0")}`;
-  } catch (error) {
-    console.error("Error getting next employee ID:", error);
-    return `EMP${Date.now()}`;
-  }
-};
-
-// Transform EmployeeFormData to Employee
-const transformFormDataToEmployee = (formData: EmployeeFormData): Employee => {
-  const fullName = [formData.firstName, formData.middleName, formData.lastName]
+// Transform EmployeeFromAPI to Employee for display
+const transformEmployeeFromAPI = (employee: EmployeeFromAPI): Employee => {
+  const fullName = [
+    employee.first_name,
+    employee.middle_name,
+    employee.last_name,
+  ]
     .filter(Boolean)
     .join(" ");
 
   // Format salary with peso sign
-  const salary = formData.monthlySalary
-    ? `₱${parseFloat(formData.monthlySalary).toLocaleString("en-US", {
+  const salary = employee.monthly_salary
+    ? `₱${parseFloat(employee.monthly_salary).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`
     : "₱0.00";
 
   return {
-    id: getNextEmployeeId(),
+    id: employee.id.toString(),
     name: fullName,
-    position: formData.position,
-    department: formData.department,
+    position: employee.position,
+    department: employee.department,
     salary: salary,
-    status: "Active",
+    status: "Active", // You can add status field to the API later
   };
 };
 
@@ -306,39 +157,36 @@ const employeeColumns: ColumnDef<Employee>[] = [
   },
 ];
 
-// Table action items
-const employeeActions: ActionItem<Employee>[] = [
-  {
-    label: "View",
-    icon: Eye,
-    onClick: (employee) => {
-      console.log("View employee:", employee);
-      // Handle view action
-    },
-  },
-  {
-    label: "Edit",
-    icon: Edit,
-    onClick: (employee) => {
-      console.log("Edit employee:", employee);
-      // Handle edit action
-    },
-  },
-  {
-    label: "Delete",
-    icon: Trash2,
-    onClick: (employee) => {
-      console.log("Delete employee:", employee);
-      // Handle delete action
-    },
-    variant: "destructive",
-  },
-];
+// Table action items - will be created inside component to access handlers
 
 export function EmployeesTab() {
-  // Load employees from localStorage on mount
-  const [employees, setEmployees] = useState<Employee[]>(() =>
-    loadEmployeesFromStorage()
+  // Use Zustand store
+  const {
+    employees: employeesFromAPI,
+    loading,
+    error,
+    fetchEmployees,
+    getEmployee,
+    createEmployee,
+    updateEmployee,
+    deleteEmployee,
+    setFilters,
+    clearFilters,
+  } = useEmployeeStore();
+
+  const { query: searchQuery } = useSearchStore();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [isViewEmployeeOpen, setIsViewEmployeeOpen] = useState(false);
+  const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<EmployeeFromAPI | null>(null);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<
+    number | undefined
+  >();
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
+    null
   );
 
   // Filter state - using a single object for all filters
@@ -349,8 +197,24 @@ export function EmployeesTab() {
     status: [],
     position: [],
   });
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+
+  // Fetch employees on mount and when filters/search change
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  // Update store filters when search query changes
+  useEffect(() => {
+    if (searchQuery !== undefined) {
+      setFilters({ search: searchQuery || undefined });
+      fetchEmployees();
+    }
+  }, [searchQuery, setFilters, fetchEmployees]);
+
+  // Transform API employees to display format
+  const employees = useMemo(() => {
+    return employeesFromAPI.map(transformEmployeeFromAPI);
+  }, [employeesFromAPI]);
 
   // Get unique values for filters
   const uniqueDepartments = useMemo(() => {
@@ -435,52 +299,223 @@ export function EmployeesTab() {
   // Handle filter changes from FilterDialog
   const handleFilterChange = (filters: Record<string, string[]>) => {
     setSelectedFilters(filters);
+
+    // Update store filters
+    const storeFilters: Record<string, string> = {};
+    if (filters.department.length > 0) {
+      storeFilters.department = filters.department[0];
+    }
+    if (filters.position.length > 0) {
+      storeFilters.position = filters.position[0];
+    }
+    setFilters(storeFilters);
+    fetchEmployees();
   };
 
   // Clear all filters
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     setSelectedFilters({
       department: [],
       status: [],
       position: [],
     });
+    clearFilters();
+    fetchEmployees();
   };
 
   // Handle employee onboarding submission
-  const handleEmployeeSubmit = (data: EmployeeFormData) => {
+  const handleEmployeeSubmit = async (data: EmployeeFormData) => {
     try {
-      // Transform form data to employee format
-      const newEmployee = transformFormDataToEmployee(data);
+      const newEmployee = await createEmployee(data);
 
-      // Add new employee to the beginning of the list (so it appears at the top)
-      const updatedEmployees = [newEmployee, ...employees];
+      if (newEmployee) {
+        const fullName = [
+          newEmployee.first_name,
+          newEmployee.middle_name,
+          newEmployee.last_name,
+        ]
+          .filter(Boolean)
+          .join(" ");
 
-      // Save to localStorage
-      saveEmployeesToStorage(updatedEmployees);
-
-      // Update state to trigger re-render
-      setEmployees(updatedEmployees);
-
-      // Show success toast
-      toast.success("Employee Added Successfully", {
-        description: `${newEmployee.name} has been added to the system.`,
-        duration: 3000,
-      });
-
-      console.log("Employee added successfully:", newEmployee);
-    } catch (error) {
-      console.error("Error saving employee:", error);
-      // Show error toast
+        toast.success("Employee Added Successfully", {
+          description: `${fullName} has been added to the system.`,
+          duration: 3000,
+        });
+        setIsAddEmployeeOpen(false);
+        // Reset form is handled by the dialog when it closes
+      } else {
+        // Error handling is done in the store, but show a toast if there's a general error
+        if (error && !error.includes("validation")) {
+          toast.error("Failed to Add Employee", {
+            description: error,
+            duration: 4000,
+          });
+        }
+        // If there are validation errors, they're already shown in the form fields
+        // Don't close the dialog so user can fix the errors
+      }
+    } catch (err) {
+      console.error("Error saving employee:", err);
       toast.error("Failed to Add Employee", {
         description:
           "An error occurred while saving the employee. Please try again.",
         duration: 4000,
       });
+      // Don't close dialog on error so user can see validation errors
     }
   };
 
+  // Handle view employee
+  const handleViewEmployee = async (employee: Employee) => {
+    try {
+      const employeeData = await getEmployee(parseInt(employee.id));
+      if (employeeData) {
+        setSelectedEmployee(employeeData);
+        setIsViewEmployeeOpen(true);
+      } else {
+        toast.error("Failed to Load Employee", {
+          description: "Could not load employee details.",
+          duration: 4000,
+        });
+      }
+    } catch (err) {
+      console.error("Error loading employee:", err);
+      toast.error("Failed to Load Employee", {
+        description: "An error occurred while loading employee details.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle edit employee
+  const handleEditEmployee = async (employee: Employee) => {
+    try {
+      const employeeData = await getEmployee(parseInt(employee.id));
+      if (employeeData) {
+        setEditingEmployeeId(employeeData.id);
+        setIsEditEmployeeOpen(true);
+      } else {
+        toast.error("Failed to Load Employee", {
+          description: "Could not load employee details for editing.",
+          duration: 4000,
+        });
+      }
+    } catch (err) {
+      console.error("Error loading employee:", err);
+      toast.error("Failed to Load Employee", {
+        description: "An error occurred while loading employee details.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle employee update submission
+  const handleEmployeeUpdate = async (data: EmployeeFormData) => {
+    if (!editingEmployeeId) return;
+
+    try {
+      const updatedEmployee = await updateEmployee(editingEmployeeId, data);
+
+      if (updatedEmployee) {
+        const fullName = [
+          updatedEmployee.first_name,
+          updatedEmployee.middle_name,
+          updatedEmployee.last_name,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        toast.success("Employee Updated Successfully", {
+          description: `${fullName} has been updated.`,
+          duration: 3000,
+        });
+        setIsEditEmployeeOpen(false);
+        setEditingEmployeeId(undefined);
+        // Refresh employee list
+        await fetchEmployees();
+      } else {
+        if (error && !error.includes("validation")) {
+          toast.error("Failed to Update Employee", {
+            description: error,
+            duration: 4000,
+          });
+        }
+        // Validation errors are shown in form fields
+      }
+    } catch (err) {
+      console.error("Error updating employee:", err);
+      toast.error("Failed to Update Employee", {
+        description:
+          "An error occurred while updating the employee. Please try again.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle delete button click - open confirmation dialog
+  const handleDeleteClick = (employee: Employee) => {
+    setEmployeeToDelete(employee);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle confirmed deletion
+  const handleConfirmDelete = async () => {
+    if (!employeeToDelete) return;
+
+    try {
+      const success = await deleteEmployee(parseInt(employeeToDelete.id));
+      if (success) {
+        toast.success("Employee Deleted Successfully", {
+          description: `${employeeToDelete.name} has been removed from the system.`,
+          duration: 3000,
+        });
+        setIsDeleteDialogOpen(false);
+        setEmployeeToDelete(null);
+      } else {
+        toast.error("Failed to Delete Employee", {
+          description:
+            error || "An error occurred while deleting the employee.",
+          duration: 4000,
+        });
+      }
+    } catch (err) {
+      console.error("Error deleting employee:", err);
+      toast.error("Failed to Delete Employee", {
+        description: "An error occurred while deleting the employee.",
+        duration: 4000,
+      });
+    }
+  };
+
+  // Table action items
+  const employeeActions: ActionItem<Employee>[] = [
+    {
+      label: "View",
+      icon: Eye,
+      onClick: handleViewEmployee,
+    },
+    {
+      label: "Edit",
+      icon: Edit,
+      onClick: handleEditEmployee,
+    },
+    {
+      label: "Delete",
+      icon: Trash2,
+      onClick: handleDeleteClick,
+      variant: "destructive",
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-destructive/15 text-destructive border border-destructive/50 rounded-md p-4">
+          {error}
+        </div>
+      )}
+
       {/* Top section: Search and Buttons - Responsive layout */}
       <div className="flex flex-row sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mt-4">
         {/* Left side: Search and Filter */}
@@ -522,15 +557,21 @@ export function EmployeesTab() {
 
       {/* Table Section - Responsive table with horizontal scroll on mobile */}
       <div className="w-full">
-        <AppTable
-          data={filteredEmployees}
-          columns={employeeColumns}
-          actions={employeeActions}
-          itemsPerPage={5}
-          caption="A list of employees."
-          minWidth="800px"
-          getRowId={(row) => row.id}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Loading employees...</p>
+          </div>
+        ) : (
+          <AppTable
+            data={filteredEmployees}
+            columns={employeeColumns}
+            actions={employeeActions}
+            itemsPerPage={5}
+            caption="A list of employees."
+            minWidth="800px"
+            getRowId={(row) => row.id}
+          />
+        )}
       </div>
 
       {/* Filter Dialog */}
@@ -541,7 +582,7 @@ export function EmployeesTab() {
         filterGroups={filterGroups}
         selectedFilters={selectedFilters}
         onFilterChange={handleFilterChange}
-        onClearFilters={clearFilters}
+        onClearFilters={handleClearFilters}
       />
 
       {/* Add Employee Dialog */}
@@ -550,8 +591,50 @@ export function EmployeesTab() {
         onOpenChange={setIsAddEmployeeOpen}
         title="Add Employee"
         onSubmit={handleEmployeeSubmit}
-        departments={uniqueDepartments}
-        positions={uniquePositions}
+        mode="create"
+      />
+
+      {/* Edit Employee Dialog */}
+      <EmployeeOnboardingDialog
+        open={isEditEmployeeOpen}
+        onOpenChange={(open) => {
+          setIsEditEmployeeOpen(open);
+          if (!open) {
+            setEditingEmployeeId(undefined);
+          }
+        }}
+        title="Edit Employee"
+        onSubmit={handleEmployeeUpdate}
+        mode="edit"
+        employeeId={editingEmployeeId}
+      />
+
+      {/* View Employee Dialog */}
+      <EmployeeViewDialog
+        open={isViewEmployeeOpen}
+        onOpenChange={setIsViewEmployeeOpen}
+        employee={selectedEmployee}
+        onEdit={async (employee) => {
+          // Close view dialog and open edit dialog
+          setIsViewEmployeeOpen(false);
+          setEditingEmployeeId(employee.id);
+          setIsEditEmployeeOpen(true);
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Employee"
+        description={
+          employeeToDelete
+            ? `Are you sure you want to delete "${employeeToDelete.name}"? This action cannot be undone and all associated data will be permanently removed.`
+            : "Are you sure you want to delete this employee? This action cannot be undone."
+        }
+        itemName={employeeToDelete?.name}
+        onConfirm={handleConfirmDelete}
+        isLoading={loading}
       />
     </div>
   );

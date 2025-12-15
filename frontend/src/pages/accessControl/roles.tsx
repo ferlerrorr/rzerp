@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ApiResponse } from "@/lib/types";
-import { AppButtons } from "@/components/app-Buttons";
+import { AppButtons } from "@/components/common/app-Buttons";
 import { RoleCard } from "@/components/card/roleCard";
-import { AddRoleDialog } from "@/components/add-role-dialog";
+import { AddRoleDialog } from "@/components/dialogs/add-role-dialog";
 import { RoleFormData } from "@/stores/role";
 import { Shield } from "lucide-react";
 
