@@ -1,10 +1,10 @@
-import { ReactNode } from "react"
-import { AppSidebar } from "../app-sidebar"
-import { SidebarProvider, SidebarInset } from "../ui/sidebar"
-import { SiteHeader } from "../navbar"
+import { ReactNode } from "react";
+import { AppSidebar } from "@/components/common/app-sidebar";
+import { SidebarProvider, SidebarInset } from "../ui/sidebar";
+import { SiteHeader } from "../navbar";
 
 interface AppLayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -18,6 +18,5 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
-
