@@ -355,6 +355,162 @@ class UserController extends Controller
     }
 
     /**
+     * Verify email address
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function verifyEmail(Request $request, int $id): JsonResponse
+    {
+        // Verify signed URL
+        if (!$request->hasValidSignature()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired verification link',
+            ], 403);
+        }
+
+        $hash = $request->input('hash');
+        
+        if (!$hash) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid verification link',
+            ], 422);
+        }
+
+        $result = User::verifyEmail($id, $hash);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Resend email verification
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function resendVerificationEmail(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not authenticated',
+            ], 401);
+        }
+
+        $result = User::sendEmailVerification($user);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Request password reset (forgot password)
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $validated = User::validateForgotPassword($request->all());
+        $result = User::sendPasswordResetEmail($validated['email']);
+
+        // Always return success message for security (don't reveal if email exists)
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Reset password with token
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validated = User::validateResetPassword($request->all());
+        $result = User::resetPassword(
+            $validated['email'],
+            $validated['token'],
+            $validated['password']
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Change password for authenticated user
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not authenticated',
+            ], 401);
+        }
+
+        $validated = User::validateChangePassword($request->all());
+        $result = User::changePassword(
+            $user,
+            $validated['current_password'],
+            $validated['password']
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
      * Expire session cookie helper
      *
      * @param JsonResponse $response

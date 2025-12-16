@@ -9,11 +9,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session as SessionFacade;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
@@ -1015,6 +1017,374 @@ class User extends Authenticatable
                 'roles' => $user->roles->pluck('name')->toArray(),
                 'permissions' => $permissions,
             ],
+        ];
+    }
+
+    /**
+     * Get a model instance for the password reset tokens table using Eloquent.
+     *
+     * @return Model
+     */
+    protected static function passwordResetTokenModel(): Model
+    {
+        $model = new class extends Model {
+            protected $table = 'password_reset_tokens';
+            protected $primaryKey = 'email';
+            protected $keyType = 'string';
+            public $incrementing = false;
+            public $timestamps = false;
+            protected $fillable = ['email', 'token', 'created_at'];
+        };
+        
+        return $model;
+    }
+
+    /**
+     * Get a query builder for the password reset tokens table using Eloquent.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected static function passwordResetTokenQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::passwordResetTokenModel()->newQuery();
+    }
+
+    /**
+     * Validate email verification request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateEmailVerification(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'token' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate forgot password request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateForgotPassword(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'email' => ['required', 'email', 'exists:users,email'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate reset password request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateResetPassword(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'email' => ['required', 'email'],
+            'token' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate change password request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateChangePassword(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Send email verification notification.
+     *
+     * @param User $user
+     * @return array<string, mixed>
+     */
+    public static function sendEmailVerification(User $user): array
+    {
+        if ($user->email_verified_at) {
+            return [
+                'success' => false,
+                'message' => 'Email already verified',
+            ];
+        }
+
+        try {
+            // Create a signed URL that expires in 24 hours
+            $verificationUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addHours(24),
+                ['id' => $user->id, 'hash' => sha1($user->email)]
+            );
+
+            // Send email using Mail facade
+            Mail::raw("Please verify your email by clicking this link: {$verificationUrl}", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Verify Your Email Address');
+            });
+
+            Log::info("Email verification sent to user {$user->id}");
+
+            return [
+                'success' => true,
+                'message' => 'Verification email sent successfully',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to send verification email: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to send verification email',
+            ];
+        }
+    }
+
+    /**
+     * Verify user email.
+     *
+     * @param int $userId
+     * @param string $hash
+     * @return array<string, mixed>
+     */
+    public static function verifyEmail(int $userId, string $hash): array
+    {
+        $user = self::find($userId);
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'User not found',
+            ];
+        }
+
+        if ($user->email_verified_at) {
+            return [
+                'success' => false,
+                'message' => 'Email already verified',
+            ];
+        }
+
+        // Verify hash matches email
+        if (sha1($user->email) !== $hash) {
+            return [
+                'success' => false,
+                'message' => 'Invalid verification link',
+            ];
+        }
+
+        $user->email_verified_at = now();
+        $user->save();
+
+        Log::info("Email verified for user {$user->id}");
+
+        return [
+            'success' => true,
+            'message' => 'Email verified successfully',
+        ];
+    }
+
+    /**
+     * Send password reset notification.
+     *
+     * @param string $email
+     * @return array<string, mixed>
+     */
+    public static function sendPasswordResetEmail(string $email): array
+    {
+        $user = self::where('email', $email)->first();
+
+        if (!$user) {
+            // Don't reveal if email exists for security
+            return [
+                'success' => true,
+                'message' => 'If the email exists, a password reset link has been sent',
+            ];
+        }
+
+        try {
+            $token = Str::random(64);
+            $resetUrl = config('app.url') . '/api/auth/reset-password?token=' . $token . '&email=' . urlencode($email);
+
+            // Store reset token in password_reset_tokens table
+            self::passwordResetTokenModel()->updateOrCreate(
+                ['email' => $email],
+                [
+                    'token' => Hash::make($token),
+                    'created_at' => now(),
+                ]
+            );
+
+            // Send email
+            Mail::raw("Click this link to reset your password: {$resetUrl}", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Reset Your Password');
+            });
+
+            Log::info("Password reset email sent to user {$user->id}");
+
+            return [
+                'success' => true,
+                'message' => 'If the email exists, a password reset link has been sent',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to send password reset email: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to send password reset email',
+            ];
+        }
+    }
+
+    /**
+     * Reset user password.
+     *
+     * @param string $email
+     * @param string $token
+     * @param string $password
+     * @return array<string, mixed>
+     */
+    public static function resetPassword(string $email, string $token, string $password): array
+    {
+        $user = self::where('email', $email)->first();
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'Invalid reset token',
+            ];
+        }
+
+        // Get reset token record
+        $resetRecord = self::passwordResetTokenQuery()->where('email', $email)->first();
+
+        if (!$resetRecord) {
+            return [
+                'success' => false,
+                'message' => 'Invalid or expired reset token',
+            ];
+        }
+
+        // Check if token is valid (within 60 minutes)
+        $tokenAge = now()->diffInMinutes($resetRecord->created_at);
+        if ($tokenAge > 60) {
+            $resetRecord->delete();
+            return [
+                'success' => false,
+                'message' => 'Reset token has expired',
+            ];
+        }
+
+        // Verify token
+        if (!Hash::check($token, $resetRecord->token)) {
+            return [
+                'success' => false,
+                'message' => 'Invalid reset token',
+            ];
+        }
+
+        // Update password
+        $user->password = Hash::make($password);
+        $user->save();
+
+        // Delete reset token
+        $resetRecord->delete();
+
+        Log::info("Password reset successful for user {$user->id}");
+
+        return [
+            'success' => true,
+            'message' => 'Password reset successfully',
+        ];
+    }
+
+    /**
+     * Change user password.
+     *
+     * @param User $user
+     * @param string $currentPassword
+     * @param string $newPassword
+     * @return array<string, mixed>
+     */
+    public static function changePassword(User $user, string $currentPassword, string $newPassword): array
+    {
+        // Verify current password
+        if (!Hash::check($currentPassword, $user->password)) {
+            return [
+                'success' => false,
+                'message' => 'Current password is incorrect',
+            ];
+        }
+
+        // Update password
+        $user->password = Hash::make($newPassword);
+        $user->save();
+
+        Log::info("Password changed for user {$user->id}");
+
+        return [
+            'success' => true,
+            'message' => 'Password changed successfully',
         ];
     }
 }

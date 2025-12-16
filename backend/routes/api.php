@@ -29,6 +29,10 @@ Route::prefix('auth')->group(function () {
     Route::post('/logout', [UserController::class, 'logout']);
     // Refresh doesn't require auth - it works with session cookie
     Route::post('/refresh', [UserController::class, 'refresh']);
+    // Email verification routes
+    Route::get('/verify-email/{id}', [UserController::class, 'verifyEmail'])->name('verification.verify');
+    Route::post('/forgot-password', [UserController::class, 'forgotPassword']);
+    Route::post('/reset-password', [UserController::class, 'resetPassword']);
 });
 
 // User endpoint (matches frontend expectation)
@@ -38,6 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
      Route::get('/user', [UserController::class, 'me']);
+     
+     // Email verification and password management
+     Route::post('/resend-verification-email', [UserController::class, 'resendVerificationEmail']);
+     Route::post('/change-password', [UserController::class, 'changePassword']);
     
     // HRIS routes with permission checks
     Route::prefix('hris')->group(function () {
