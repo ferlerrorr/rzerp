@@ -427,36 +427,63 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        // For session-based auth, try to authenticate via Sanctum
-        // This will check both session and bearer token
+        // Check if user is authenticated first - return 401 if not
         $user = $request->user();
         
-        // If not authenticated, return 401 so frontend can handle it
         if (!$user) {
-            return response()->json([
+            $response = response()->json([
                 'success' => false,
                 'message' => 'Not authenticated',
             ], 401);
+            
+            // Expire session cookie if it exists
+            return $this->expireSessionCookie($response);
         }
 
-        // Verify session exists in database before refreshing
+        // Ensure session is started
+        if (!$request->hasSession()) {
+            $request->session()->start();
+        }
+
+        // Verify session exists in database (for database driver)
         if (config('session.driver') === 'database') {
             $sessionId = null;
             if ($request->hasSession()) {
                 $sessionId = $request->session()->getId();
             }
             
-            // If session doesn't exist in database, don't refresh
-            if ($sessionId && !Session::where('id', $sessionId)->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Session not found in database',
-                ], 401);
+            // Check if session exists in database
+            if ($sessionId) {
+                $session = Session::where('id', $sessionId)->first();
+                
+                if (!$session) {
+                    // Session cookie exists but no session in DB - invalidate and return 401
+                    if ($request->hasSession()) {
+                        try {
+                            $request->session()->invalidate();
+                        } catch (\Exception $e) {
+                            // Ignore errors
+                        }
+                    }
+                    
+                    $response = response()->json([
+                        'success' => false,
+                        'message' => 'Session not found in database',
+                    ], 401);
+                    
+                    // Expire session cookie
+                    return $this->expireSessionCookie($response);
+                }
+                
+                // Update session activity
+                $session->update([
+                    'last_activity' => time(),
+                ]);
             }
         }
 
         // Regenerate session ID for security (prevents session fixation)
-        // Only regenerate if we have a session and it exists in database
+        // Only regenerate if we have a valid session
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }

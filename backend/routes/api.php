@@ -22,11 +22,6 @@ use App\Http\Controllers\Api\PositionController;
 // Public routes
 Route::get('/health', [HealthController::class, 'index']);
 
-// CSRF cookie endpoint (for session-based auth)
-Route::get('/csrf-cookie', function () {
-    return response()->json(['success' => true, 'message' => 'CSRF cookie set']);
-});
-
 // Authentication routes
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);

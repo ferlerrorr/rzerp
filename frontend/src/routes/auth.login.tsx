@@ -207,19 +207,19 @@ export function LoginPage() {
             </p>
           </div>
 
-          {/* Hidden traps to absorb aggressive autofill when not remembering */}
-          {!remember && (
-            <div aria-hidden className="hidden">
-              <input type="text" autoComplete="username" />
-              <input type="password" autoComplete="current-password" />
-            </div>
-          )}
-
           <form
+            id="login-form"
             onSubmit={handleSubmit}
             className="flex flex-col gap-4 sm:gap-6 md:gap-4"
             autoComplete={formAttributes.formAutoComplete}
           >
+            {/* Hidden traps to absorb aggressive autofill when not remembering */}
+            {!remember && (
+              <div aria-hidden className="hidden">
+                <input type="text" autoComplete="username" />
+                <input type="password" autoComplete="current-password" />
+              </div>
+            )}
             <div className="grid gap-1 sm:gap-1">
               <label
                 htmlFor="Email"
