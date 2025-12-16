@@ -1,5 +1,5 @@
 <?php
 
 return [
-    App\Providers\AppServiceProvider::class,
+    // AppServiceProvider removed - all logic consolidated into models/controllers
 ];
