@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api } from "../lib/api";
 import { ApiResponse, User } from "../lib/types";
+import { deleteCookie } from "../lib/utils";
 import { useRbacStore } from "./rbac";
 
 interface AuthState {
@@ -37,7 +38,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await api.get<ApiResponse<User>>("/api/user");
       if (response.data.success && response.data.data) {
         const user = response.data.data;
-        set({ user, isAuthenticated: true, loading: false, isLoading: false, error: null });
+        set({
+          user,
+          isAuthenticated: true,
+          loading: false,
+          isLoading: false,
+          error: null,
+        });
         // Sync permissions and roles to RBAC store
         if (user.permissions) {
           useRbacStore.getState().setPermissions(user.permissions);
@@ -46,14 +53,42 @@ export const useAuthStore = create<AuthState>((set) => ({
           useRbacStore.getState().setRoles(user.roles);
         }
       } else {
-        set({ user: null, isAuthenticated: false, loading: false, isLoading: false });
+        // Session validation failed - clear state and cookies
+        set({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+          isLoading: false,
+        });
         useRbacStore.getState().setPermissions([]);
         useRbacStore.getState().setRoles([]);
+        // Remove session cookie if session doesn't exist in database
+        deleteCookie("laravel-session", "/");
+        deleteCookie("laravel-session", "/", ".socia-dev.com");
+        deleteCookie("laravel-session", "/", "localhost");
       }
-    } catch {
-      set({ user: null, isAuthenticated: false, loading: false, isLoading: false });
+    } catch (error: any) {
+      // Handle 401 (session not found in database) or other errors
+      const isSessionNotFound =
+        error?.response?.status === 401 &&
+        (error?.response?.data?.message?.includes("Session not found") ||
+          error?.response?.data?.message?.includes("Not authenticated"));
+
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        isLoading: false,
+      });
       useRbacStore.getState().setPermissions([]);
       useRbacStore.getState().setRoles([]);
+
+      // If session doesn't exist in database, remove cookie
+      if (isSessionNotFound) {
+        deleteCookie("laravel-session", "/");
+        deleteCookie("laravel-session", "/", ".socia-dev.com");
+        deleteCookie("laravel-session", "/", "localhost");
+      }
     }
   },
 
@@ -74,7 +109,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (response.data.success && response.data.data) {
         const user = response.data.data;
-        set({ user, isAuthenticated: true, loading: false, isLoading: false, error: null });
+        set({
+          user,
+          isAuthenticated: true,
+          loading: false,
+          isLoading: false,
+          error: null,
+        });
         // Sync permissions and roles to RBAC store
         if (user.permissions) {
           useRbacStore.getState().setPermissions(user.permissions);
@@ -84,28 +125,58 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       } else {
         const errorMessage = response.data.message || "Login failed";
-        set({ user: null, isAuthenticated: false, loading: false, isLoading: false, error: errorMessage });
+        set({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+          isLoading: false,
+          error: errorMessage,
+        });
         useRbacStore.getState().setPermissions([]);
         useRbacStore.getState().setRoles([]);
         throw new Error(errorMessage);
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Login failed";
-      set({ user: null, isAuthenticated: false, loading: false, isLoading: false, error: errorMessage });
+      const errorMessage =
+        error?.response?.data?.message || error?.message || "Login failed";
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        isLoading: false,
+        error: errorMessage,
+      });
       throw error;
     }
   },
 
   logout: async () => {
     try {
-      await api.post("/api/auth/logout");
+      const response = await api.post("/api/auth/logout");
+
+      // If logout is successful, remove the laravel-session cookie
+      if (response.data?.success) {
+        // Delete laravel-session cookie for both localhost and any configured domain
+        deleteCookie("laravel-session", "/");
+        // Also try with common domain patterns
+        deleteCookie("laravel-session", "/", ".socia-dev.com");
+        deleteCookie("laravel-session", "/", "localhost");
+      }
     } catch {
-      // Continue even if logout fails
+      // Continue even if logout fails, but still try to remove cookie
+      deleteCookie("laravel-session", "/");
+      deleteCookie("laravel-session", "/", ".socia-dev.com");
+      deleteCookie("laravel-session", "/", "localhost");
     } finally {
-      set({ user: null, isAuthenticated: false, loading: false, isLoading: false, error: null });
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        isLoading: false,
+        error: null,
+      });
       useRbacStore.getState().setPermissions([]);
       useRbacStore.getState().setRoles([]);
     }
   },
 }));
-

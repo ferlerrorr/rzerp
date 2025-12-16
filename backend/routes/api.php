@@ -31,19 +31,20 @@ Route::get('/csrf-cookie', function () {
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+    // Logout doesn't require auth - it should work even if session is invalid
+    // This allows cleanup of stale cookies
+    Route::post('/logout', [AuthController::class, 'logout']);
     // Refresh doesn't require auth - it works with session cookie
     Route::post('/refresh', [AuthController::class, 'refresh']);
 });
 
 // User endpoint (matches frontend expectation)
 
-
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
 
 
-     Route::get('/user', [AuthController::class, 'me'])->middleware('auth:sanctum');
+     Route::get('/user', [AuthController::class, 'me']);
     
     // HRIS routes with permission checks
     Route::prefix('hris')->group(function () {

@@ -57,6 +57,7 @@ let refreshPromise: Promise<void> | null = null;
 /**
  * Attempt to refresh the session
  * Uses a shared promise to prevent concurrent refresh requests
+ * Only refreshes if session exists in database (backend validates this)
  */
 async function attemptRefresh(): Promise<void> {
   // If a refresh is already in progress, wait for it
@@ -68,17 +69,18 @@ async function attemptRefresh(): Promise<void> {
   refreshPromise = (async () => {
     try {
       const response = await api.post("/api/auth/refresh");
-      // If refresh succeeds, return
+      // If refresh succeeds, session exists in database and was refreshed
       if (response.data?.success) {
         return;
       }
-      // If refresh returns non-success, logout
+      // If refresh returns non-success, session doesn't exist - logout
       useAuthStore.getState().logout();
-      throw new Error("Refresh failed");
+      throw new Error("Refresh failed - session not found in database");
     } catch (error) {
-      // Only logout if it's a 401 (unauthorized) - other errors might be network issues
+      // Only logout if it's a 401 (unauthorized) - means session doesn't exist in database
       const axiosError = error as AxiosError;
       if (axiosError.response?.status === 401) {
+        // Session doesn't exist in database - force logout to clear cookies
         useAuthStore.getState().logout();
       }
       throw error;
@@ -119,8 +121,9 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Unauthorized (401) – try refresh once
+    // Unauthorized (401) – try refresh once only if session might exist
     // Skip if this is an auth endpoint (including refresh) or already retried
+    // Backend /user endpoint validates session exists in database before returning 401
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -128,11 +131,14 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        // Use shared refresh promise to prevent concurrent refresh requests
+        // Attempt to refresh - backend will check if session exists in database
+        // If session doesn't exist, refresh will return 401 and logout will be called
         await attemptRefresh();
+        // If refresh succeeded, session exists in database - retry original request
         return api(originalRequest);
       } catch {
-        // Refresh failed, logout already handled in attemptRefresh
+        // Refresh failed - session doesn't exist in database
+        // Logout already handled in attemptRefresh (clears cookies and state)
         return Promise.reject(error);
       }
     }
