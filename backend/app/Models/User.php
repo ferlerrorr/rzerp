@@ -7,12 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session as SessionFacade;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use App\Models\Session;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class User extends Authenticatable
 {
@@ -54,11 +58,63 @@ class User extends Authenticatable
     }
 
     /**
+     * Get a model instance for the roles table using Eloquent.
+     *
+     * @return Model
+     */
+    protected static function roleModel(): Model
+    {
+        $model = new class extends Model {
+            protected $table = 'roles';
+            protected $fillable = ['name'];
+        };
+        
+        return $model;
+    }
+
+    /**
+     * Get a query builder for the roles table using Eloquent.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function roleQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::roleModel()->newQuery();
+    }
+
+    /**
+     * Get a model instance for the permissions table using Eloquent.
+     *
+     * @return Model
+     */
+    protected static function permissionModel(): Model
+    {
+        $model = new class extends Model {
+            protected $table = 'permissions';
+            protected $fillable = ['name'];
+        };
+        
+        return $model;
+    }
+
+    /**
+     * Get a query builder for the permissions table using Eloquent.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function permissionQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::permissionModel()->newQuery();
+    }
+
+    /**
      * Get the roles for the user.
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'user_role');
+        // Use the role model class for the relationship
+        $roleModelClass = get_class(self::roleModel());
+        return $this->belongsToMany($roleModelClass, 'user_role', 'user_id', 'role_id');
     }
 
     /**
@@ -77,9 +133,12 @@ class User extends Authenticatable
             return collect([]);
         }
 
-        return \App\Models\Permission::whereHas('roles', function ($query) use ($roleIds) {
-            $query->whereIn('roles.id', $roleIds);
-        })->get();
+        return self::permissionQuery()
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->whereIn('role_permission.role_id', $roleIds)
+            ->select('permissions.*')
+            ->distinct()
+            ->get();
     }
 
     /**
@@ -106,10 +165,10 @@ class User extends Authenticatable
             return false;
         }
 
-        return \App\Models\Permission::where('name', $permissionName)
-            ->whereHas('roles', function ($query) use ($roleIds) {
-                $query->whereIn('roles.id', $roleIds);
-            })
+        return self::permissionQuery()
+            ->where('permissions.name', $permissionName)
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->whereIn('role_permission.role_id', $roleIds)
             ->exists();
     }
 
@@ -135,9 +194,12 @@ class User extends Authenticatable
     {
         $this->load('roles');
         $roleIds = $this->roles->pluck('id')->toArray();
-        $permissions = empty($roleIds) ? [] : \App\Models\Permission::whereHas('roles', function ($query) use ($roleIds) {
-            $query->whereIn('roles.id', $roleIds);
-        })->pluck('name')->toArray();
+        $permissions = empty($roleIds) ? [] : self::permissionQuery()
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->whereIn('role_permission.role_id', $roleIds)
+            ->distinct()
+            ->pluck('permissions.name')
+            ->toArray();
 
         return [
             'id' => $this->id,
@@ -146,6 +208,130 @@ class User extends Authenticatable
             'roles' => $this->roles->pluck('name')->toArray(),
             'permissions' => $permissions,
         ];
+    }
+
+    /**
+     * Validate login request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateLogin(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate register request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateRegister(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate store user request data.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateStore(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'role_ids' => ['sometimes', 'array'],
+            'role_ids.*' => ['exists:roles,id'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * Validate update user request data.
+     *
+     * @param array<string, mixed> $data
+     * @param int|null $userId
+     * @return array<string, mixed>
+     * @throws HttpResponseException
+     */
+    public static function validateUpdate(array $data, ?int $userId = null): array
+    {
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'role_ids' => ['sometimes', 'array'],
+            'role_ids.*' => ['exists:roles,id'],
+        ];
+
+        if ($userId) {
+            $rules['email'][] = Rule::unique('users')->ignore($userId);
+        } else {
+            $rules['email'][] = 'unique:users';
+        }
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            throw new HttpResponseException(
+                response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()->toArray(),
+                ], 422)
+            );
+        }
+
+        return $validator->validated();
     }
 
     /**
@@ -215,6 +401,50 @@ class User extends Authenticatable
     }
 
     /**
+     * Get a model instance for the sessions table using Eloquent.
+     *
+     * @return Model
+     */
+    protected static function sessionModel(): Model
+    {
+        $sessionTable = config('session.table', 'sessions');
+        $connection = config('session.connection');
+        
+        $model = new class extends Model {
+            protected $table;
+            protected $primaryKey = 'id';
+            public $incrementing = false;
+            protected $keyType = 'string';
+            public $timestamps = false;
+            protected $fillable = [
+                'id',
+                'user_id',
+                'ip_address',
+                'user_agent',
+                'payload',
+                'last_activity',
+            ];
+        };
+        
+        $model->setTable($sessionTable);
+        if ($connection) {
+            $model->setConnection($connection);
+        }
+        
+        return $model;
+    }
+
+    /**
+     * Get a query builder for the sessions table using Eloquent.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected static function sessionQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::sessionModel()->newQuery();
+    }
+
+    /**
      * Handle session setup after login
      *
      * @param Request $request
@@ -247,11 +477,11 @@ class User extends Authenticatable
                 usleep(100000); // 100ms delay to ensure middleware has written
                 
                 // Check if session exists in database (written by middleware)
-                $existingSession = Session::find($sessionId);
+                $existingSession = self::sessionQuery()->where('id', $sessionId)->first();
                 
                 if ($existingSession) {
                     // Session exists - update with user_id and metadata
-                    $existingSession->update([
+                    self::sessionQuery()->where('id', $sessionId)->update([
                         'user_id' => $userId,
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent() ?? '',
@@ -265,7 +495,7 @@ class User extends Authenticatable
                     $sessionData = $request->session()->all();
                     $payload = base64_encode(serialize($sessionData));
                     
-                    Session::create([
+                    self::sessionModel()->create([
                         'id' => $sessionId,
                         'user_id' => $userId,
                         'ip_address' => $request->ip(),
@@ -279,7 +509,10 @@ class User extends Authenticatable
                 }
                 
                 // Verify the session was created/updated
-                $verifiedSession = Session::where('id', $sessionId)->where('user_id', $userId)->first();
+                $verifiedSession = self::sessionQuery()
+                    ->where('id', $sessionId)
+                    ->where('user_id', $userId)
+                    ->first();
                 if ($verifiedSession) {
                     Log::info("Session verified in database", [
                         'session_id' => $sessionId,
@@ -332,15 +565,24 @@ class User extends Authenticatable
                 $sessionId = $request->session()->getId();
                 
                 // Update or insert session with user_id
-                Session::updateOrCreate(
-                    ['id' => $sessionId],
-                    [
+                $existing = self::sessionQuery()->where('id', $sessionId)->first();
+                if ($existing) {
+                    self::sessionQuery()->where('id', $sessionId)->update([
                         'user_id' => $userId,
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent() ?? '',
                         'last_activity' => time(),
-                    ]
-                );
+                    ]);
+                } else {
+                    self::sessionModel()->create([
+                        'id' => $sessionId,
+                        'user_id' => $userId,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent() ?? '',
+                        'last_activity' => time(),
+                        'payload' => '',
+                    ]);
+                }
             } catch (\Exception $e) {
                 Log::error('Failed to write session to database: ' . $e->getMessage(), [
                     'exception' => $e,
@@ -364,7 +606,7 @@ class User extends Authenticatable
         
         // Verify session exists in database if using database driver
         if (config('session.driver') === 'database' && $sessionId) {
-            $sessionExists = Session::where('id', $sessionId)->exists();
+            $sessionExists = self::sessionQuery()->where('id', $sessionId)->exists();
             
             if (!$sessionExists) {
                 // Session cookie exists but no session in DB - invalidate
@@ -411,12 +653,12 @@ class User extends Authenticatable
                 // Delete all sessions for this user
                 if (config('session.driver') === 'database') {
                     try {
-                        $deleted = Session::where('user_id', $userId)->delete();
+                        $deleted = self::sessionQuery()->where('user_id', $userId)->delete();
                         Log::info("Deleted {$deleted} session(s) for user {$userId} during logout");
                         
                         // Also delete by specific session ID if provided (extra safety)
                         if ($sessionId) {
-                            Session::where('id', $sessionId)->delete();
+                            self::sessionQuery()->where('id', $sessionId)->delete();
                         }
                     } catch (\Exception $e) {
                         Log::error('Failed to delete sessions during logout: ' . $e->getMessage(), [
@@ -430,7 +672,7 @@ class User extends Authenticatable
                 // No authenticated user, but still try to delete session if session ID exists
                 if ($sessionId && config('session.driver') === 'database') {
                     try {
-                        Session::where('id', $sessionId)->delete();
+                        self::sessionQuery()->where('id', $sessionId)->delete();
                         Log::info("Deleted session {$sessionId} during logout (no authenticated user)");
                     } catch (\Exception $e) {
                         // Ignore errors for unauthenticated logout
@@ -476,7 +718,7 @@ class User extends Authenticatable
             
             // Check if session exists in database
             if ($sessionId) {
-                $session = Session::where('id', $sessionId)->first();
+                $session = self::sessionQuery()->where('id', $sessionId)->first();
                 
                 if (!$session) {
                     // Session cookie exists but no session in DB - invalidate
@@ -495,7 +737,7 @@ class User extends Authenticatable
                 }
                 
                 // Update session activity
-                $session->update([
+                self::sessionQuery()->where('id', $sessionId)->update([
                     'last_activity' => time(),
                 ]);
             }
@@ -510,6 +752,269 @@ class User extends Authenticatable
         return [
             'success' => true,
             'message' => 'Session refreshed',
+        ];
+    }
+
+    /**
+     * Get list of users with pagination
+     *
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    public static function getUsers(array $filters = []): array
+    {
+        $query = self::with('roles');
+
+        // Apply filters
+        if (isset($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $users = $query->paginate($perPage);
+
+        return [
+            'users' => $users->items(),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+            ],
+        ];
+    }
+
+    /**
+     * Get a single user with roles and permissions
+     *
+     * @param int $id
+     * @return array<string, mixed>
+     */
+    public static function getUserById(int $id): array
+    {
+        $user = self::with('roles')->find($id);
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'User not found',
+            ];
+        }
+
+        // Get all permissions through roles
+        $roleIds = $user->roles->pluck('id')->toArray();
+        $permissions = empty($roleIds) ? [] : self::permissionQuery()
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->whereIn('role_permission.role_id', $roleIds)
+            ->distinct()
+            ->pluck('permissions.name')
+            ->toArray();
+
+        return [
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+                'roles' => $user->roles->pluck('name')->toArray(),
+                'permissions' => $permissions,
+            ],
+        ];
+    }
+
+    /**
+     * Create a new user
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public static function createUser(array $data): array
+    {
+        try {
+            return self::getConnection()->transaction(function () use ($data) {
+                $user = self::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'password' => Hash::make($data['password']),
+                ]);
+
+                // Assign roles if provided
+                if (isset($data['role_ids']) && is_array($data['role_ids'])) {
+                    $user->roles()->sync($data['role_ids']);
+                }
+
+                $user->load('roles');
+                $roleIds = $user->roles->pluck('id')->toArray();
+                $permissions = empty($roleIds) ? [] : self::permissionQuery()
+                    ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+                    ->whereIn('role_permission.role_id', $roleIds)
+                    ->distinct()
+                    ->pluck('permissions.name')
+                    ->toArray();
+
+                return [
+                    'success' => true,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'roles' => $user->roles->pluck('name')->toArray(),
+                        'permissions' => $permissions,
+                    ],
+                ];
+            });
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to create user: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Update a user
+     *
+     * @param int $id
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public static function updateUserById(int $id, array $data): array
+    {
+        $user = self::find($id);
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'User not found',
+                'status' => 404,
+            ];
+        }
+
+        try {
+            return $user->getConnection()->transaction(function () use ($user, $data) {
+                $updateData = [
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                ];
+
+                if (isset($data['password']) && !empty($data['password'])) {
+                    $updateData['password'] = Hash::make($data['password']);
+                }
+
+                $user->update($updateData);
+
+                // Update roles if provided
+                if (isset($data['role_ids']) && is_array($data['role_ids'])) {
+                    $user->roles()->sync($data['role_ids']);
+                }
+
+                $user->load('roles');
+                $roleIds = $user->roles->pluck('id')->toArray();
+                $permissions = empty($roleIds) ? [] : self::permissionQuery()
+                    ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+                    ->whereIn('role_permission.role_id', $roleIds)
+                    ->distinct()
+                    ->pluck('permissions.name')
+                    ->toArray();
+
+                return [
+                    'success' => true,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'roles' => $user->roles->pluck('name')->toArray(),
+                        'permissions' => $permissions,
+                    ],
+                ];
+            });
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to update user: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Delete a user
+     *
+     * @param int $id
+     * @return array<string, mixed>
+     */
+    public static function deleteUserById(int $id): array
+    {
+        $user = self::find($id);
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'User not found',
+                'status' => 404,
+            ];
+        }
+
+        // Prevent deleting super-admin
+        if ($user->hasRole('super-admin')) {
+            return [
+                'success' => false,
+                'message' => 'Cannot delete super-admin user',
+                'status' => 403,
+            ];
+        }
+
+        $user->delete();
+
+        return [
+            'success' => true,
+        ];
+    }
+
+    /**
+     * Assign roles to a user
+     *
+     * @param int $userId
+     * @param array<int> $roleIds
+     * @return array<string, mixed>
+     */
+    public static function assignRolesToUser(int $userId, array $roleIds): array
+    {
+        $user = self::find($userId);
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'User not found',
+            ];
+        }
+
+        $user->roles()->sync($roleIds);
+        $user->load('roles');
+
+        $roleIds = $user->roles->pluck('id')->toArray();
+        $permissions = empty($roleIds) ? [] : self::permissionQuery()
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->whereIn('role_permission.role_id', $roleIds)
+            ->distinct()
+            ->pluck('permissions.name')
+            ->toArray();
+
+        return [
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name')->toArray(),
+                'permissions' => $permissions,
+            ],
         ];
     }
 }

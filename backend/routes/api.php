@@ -1,11 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\HrisController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\PositionController;
@@ -24,13 +22,13 @@ Route::get('/health', [HealthController::class, 'index']);
 
 // Authentication routes
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [UserController::class, 'login']);
+    Route::post('/register', [UserController::class, 'register']);
     // Logout doesn't require auth - it should work even if session is invalid
     // This allows cleanup of stale cookies
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [UserController::class, 'logout']);
     // Refresh doesn't require auth - it works with session cookie
-    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/refresh', [UserController::class, 'refresh']);
 });
 
 // User endpoint (matches frontend expectation)
@@ -39,7 +37,7 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
 
-     Route::get('/user', [AuthController::class, 'me']);
+     Route::get('/user', [UserController::class, 'me']);
     
     // HRIS routes with permission checks
     Route::prefix('hris')->group(function () {
@@ -48,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Roles endpoint (for user management)
-    Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:users.view');
+    Route::get('/roles', [UserController::class, 'roles'])->middleware('permission:users.view');
 
     // User management routes with permission checks
     Route::prefix('users')->group(function () {
