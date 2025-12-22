@@ -76,7 +76,12 @@ export function AppTable<T extends Record<string, any>>({
   getRowId,
   footer,
 }: AppTableProps<T>) {
-  const { currentPage, itemsPerPage: storeItemsPerPage, setCurrentPage, setItemsPerPage } = useTableStore();
+  const {
+    currentPage,
+    itemsPerPage: storeItemsPerPage,
+    setCurrentPage,
+    setItemsPerPage,
+  } = useTableStore();
 
   // Sync itemsPerPage with store
   useEffect(() => {
@@ -133,8 +138,8 @@ export function AppTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className="space-y-4 rounded-3xl pb-2">
-      <div className="w-full -mx-2 sm:mx-0 ">
+    <div className="space-y-4 pb-2">
+      <div className="w-full -mx-2 sm:mx-0">
         <div
           className="overflow-x-auto px-2 sm:px-0 scrollbar-thin"
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -144,23 +149,23 @@ export function AppTable<T extends Record<string, any>>({
             style={{ minWidth: `min(100%, ${minWidth})` }}
           >
             <div style={{ minWidth: minWidth }}>
-              <Table className="w-full ">
+              <Table className="w-full border border-[#EFEFEF] rounded-2xl overflow-hidden bg-white">
                 {caption && (
                   <TableCaption className="sr-only sm:not-sr-only">
                     {caption}
                   </TableCaption>
                 )}
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableRow className="bg-[#F4F4F5] hover:bg-[#F4F4F5] border-b border-[#EFEFEF]">
                     {columns.map((column, index) => {
                       const isFirst = index === 0;
                       const isLast = index === columns.length - 1 && !actions;
                       return (
                         <TableHead
                           key={index}
-                          className={`text-xs sm:text-sm whitespace-nowrap font-semibold text-foreground bg-muted/50 h-8 py-1.5 p-3 ${
-                            isFirst ? "rounded-tl-3xl" : ""
-                          } ${isLast ? "rounded-tr-3xl" : ""} ${
+                          className={`text-sm whitespace-nowrap font-semibold text-[#505050] bg-[#F4F4F5] h-12 py-3 px-4 ${
+                            isFirst ? "rounded-tl-2xl" : ""
+                          } ${isLast ? "rounded-tr-2xl" : ""} ${
                             column.headerClassName || ""
                           } ${column.width ? `w-[${column.width}]` : ""}`}
                           style={
@@ -172,7 +177,7 @@ export function AppTable<T extends Record<string, any>>({
                       );
                     })}
                     {actions && actions.length > 0 && (
-                      <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap font-semibold text-foreground bg-muted/50 rounded-tr-3xl h-8 py-1.5 px-2.5">
+                      <TableHead className="text-right text-sm whitespace-nowrap font-semibold text-[#505050] bg-[#F4F4F5] rounded-tr-2xl h-12 py-3 px-4">
                         Actions
                       </TableHead>
                     )}
@@ -180,61 +185,70 @@ export function AppTable<T extends Record<string, any>>({
                 </TableHeader>
                 <TableBody>
                   {currentData.map((row, rowIndex) => (
-                    <TableRow key={getRowKey(row, rowIndex)}>
+                    <TableRow
+                      key={getRowKey(row, rowIndex)}
+                      className="border-b border-[#EFEFEF] hover:bg-[#FAFAFA] transition-colors"
+                    >
                       {columns.map((column, colIndex) => (
                         <TableCell
                           key={colIndex}
-                          className={`text-xs sm:text-sm whitespace-nowrap py-1.5 px-2.5 ${
+                          className={`text-sm whitespace-nowrap py-4 px-4 text-[#515151] ${
                             column.className || ""
                           }`}
                         >
                           {renderCellContent(row, column)}
                         </TableCell>
                       ))}
-                      {actions && (() => {
-                        const rowActions = typeof actions === 'function' ? actions(row) : actions;
-                        return rowActions.length > 0 ? (
-                          <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 sm:h-10 sm:w-10"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {rowActions.map((action, actionIndex) => {
-                                  const Icon = action.icon;
-                                  return (
-                                    <DropdownMenuItem
-                                      key={actionIndex}
-                                      onClick={() => action.onClick(row)}
-                                      className={
-                                        action.variant === "destructive"
-                                          ? "text-destructive"
-                                          : ""
-                                      }
-                                    >
-                                      {Icon && <Icon className="mr-2 h-4 w-4" />}
-                                      {action.label}
-                                    </DropdownMenuItem>
-                                  );
-                                })}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        ) : null;
-                      })()}
+                      {actions &&
+                        (() => {
+                          const rowActions =
+                            typeof actions === "function"
+                              ? actions(row)
+                              : actions;
+                          return rowActions.length > 0 ? (
+                            <TableCell className="text-right whitespace-nowrap py-4 px-4">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-[#F4F4F5]"
+                                  >
+                                    <MoreVertical className="h-4 w-4 text-[#515151]" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {rowActions.map((action, actionIndex) => {
+                                    const Icon = action.icon;
+                                    return (
+                                      <DropdownMenuItem
+                                        key={actionIndex}
+                                        onClick={() => action.onClick(row)}
+                                        className={
+                                          action.variant === "destructive"
+                                            ? "text-destructive"
+                                            : ""
+                                        }
+                                      >
+                                        {Icon && (
+                                          <Icon className="mr-2 h-4 w-4" />
+                                        )}
+                                        {action.label}
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          ) : null;
+                        })()}
                     </TableRow>
                   ))}
                 </TableBody>
                 {footer && (
                   <TableFooter>
                     <TableRow
-                      className={`bg-muted/50 hover:bg-muted/50 ${
+                      className={`bg-[#F4F4F5] hover:bg-[#F4F4F5] border-t border-[#EFEFEF] ${
                         footer.className || ""
                       }`}
                     >
@@ -243,7 +257,7 @@ export function AppTable<T extends Record<string, any>>({
                         return (
                           <TableCell
                             key={colIndex}
-                            className={`text-xs sm:text-sm whitespace-nowrap py-1.5 px-2.5 font-semibold ${
+                            className={`text-sm whitespace-nowrap py-4 px-4 font-semibold text-[#505050] ${
                               column.className || ""
                             }`}
                             style={
@@ -255,7 +269,7 @@ export function AppTable<T extends Record<string, any>>({
                         );
                       })}
                       {actions && actions.length > 0 && (
-                        <TableCell className="text-right whitespace-nowrap py-1.5 px-2.5">
+                        <TableCell className="text-right whitespace-nowrap py-4 px-4">
                           {/* Empty cell for actions column */}
                         </TableCell>
                       )}

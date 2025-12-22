@@ -36,34 +36,12 @@ interface OverViewCardProps {
 }
 
 const trendColors = {
-  green: "text-green-500",
+  green: "text-[#55BC2D]",
   red: "text-red-500",
   blue: "text-blue-500",
   yellow: "text-yellow-500",
   orange: "text-orange-500",
   purple: "text-purple-500",
-};
-
-const iconBgColors = {
-  blue: "bg-blue-100",
-  green: "bg-green-100",
-  purple: "bg-purple-100",
-  orange: "bg-orange-100",
-  pink: "bg-pink-100",
-  indigo: "bg-indigo-100",
-  teal: "bg-teal-100",
-  yellow: "bg-yellow-100",
-};
-
-const iconColors = {
-  blue: "text-blue-600",
-  green: "text-green-600",
-  purple: "text-purple-600",
-  orange: "text-orange-600",
-  pink: "text-pink-600",
-  indigo: "text-indigo-600",
-  teal: "text-teal-600",
-  yellow: "text-yellow-600",
 };
 
 const valueColors = {
@@ -74,14 +52,13 @@ const valueColors = {
   orange: "text-orange-600",
   purple: "text-purple-600",
   brown: "text-amber-700",
-  default: "text-foreground",
+  default: "text-[#515151]",
 };
 
 export function OverViewCard({
   title,
   value,
   icon: Icon,
-  iconBgColor = "blue",
   valueColor = "default",
   trend,
   ariaLabel,
@@ -92,43 +69,56 @@ export function OverViewCard({
 
   return (
     <Card
-      className={cn("p-4 rounded-2xl", className)}
+      className={cn(
+        "w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2",
+        className
+      )}
       role="article"
       aria-label={ariaLabel || `${title} Overview`}
     >
       <CardHeader className="flex flex-row items-center justify-between p-0 space-y-0">
-        <Heading level={2} className="text-sm font-semibold">
+        <Heading
+          level={2}
+          className="text-sm font-medium text-[#767676] leading-[1.22]"
+        >
           {title}
         </Heading>
-        <Icon
-          className={cn(
-            "h-8 w-8 rounded-full p-2",
-            iconBgColors[iconBgColor],
-            iconColors[iconBgColor]
-          )}
-          aria-hidden="true"
-        />
+        <div className="rounded-full bg-[#F4F4F5] p-3">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
       </CardHeader>
-      <Section aria-label={`${title} count`} className="mt-2">
-        <p className={cn("text-2xl font-bold", valueColors[valueColor])}>
+      <Section aria-label={`${title} count`} className="p-0">
+        <p
+          className={cn(
+            "text-2xl font-semibold leading-[1.22]",
+            valueColors[valueColor]
+          )}
+        >
           {value}
         </p>
       </Section>
       {trend && (
         <CardContent
-          className="flex items-center mt-3"
+          className="flex flex-col items-start p-0 gap-0"
           role="status"
           aria-label={`Change ${trend.label}`}
         >
-          <TrendIcon
-            className={cn("h-4 w-4 mr-1", trendColors[trendColor])}
-            aria-hidden="true"
-          />
-          <p className="text-sm text-muted-foreground flex gap-2">
-            <span className={cn("font-semibold", trendColors[trendColor])}>
+          <div className="flex items-center gap-0">
+            <TrendIcon
+              className={cn("h-4 w-4", trendColors[trendColor])}
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                "text-sm font-semibold leading-[1.22] ml-1",
+                trendColors[trendColor]
+              )}
+            >
               {typeof trend.value === "number" && trend.value > 0 ? "+" : ""}
               {trend.value}
-            </span>{" "}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-[#515151] leading-[1.22]">
             {trend.label}
           </p>
         </CardContent>

@@ -1,5 +1,6 @@
 import { LucideIcon } from "lucide-react";
-import { Card, CardTitle, CardHeader } from "../ui/card";
+import { Card, CardHeader } from "../ui/card";
+import { Section, Heading } from "../semantic";
 import { cn } from "@/lib/utils";
 
 interface SimpleCardProps {
@@ -31,46 +32,14 @@ interface SimpleCardProps {
   className?: string;
 }
 
-const countColorClasses = {
-  default: "text-muted-foreground",
+const countColors = {
+  default: "text-[#515151]",
   green: "text-green-600",
   blue: "text-blue-600",
-  black: "text-black",
+  black: "text-[#29333D]",
   orange: "text-orange-600",
   red: "text-red-600",
   purple: "text-purple-600",
-};
-
-const iconBgColors = {
-  blue: "bg-blue-100",
-  green: "bg-green-100",
-  purple: "bg-purple-100",
-  orange: "bg-orange-100",
-  pink: "bg-pink-100",
-  indigo: "bg-indigo-100",
-  teal: "bg-teal-100",
-  yellow: "bg-yellow-100",
-  gray: "bg-gray-100",
-  red: "bg-red-100",
-};
-
-const iconColors = {
-  blue: "text-blue-600",
-  green: "text-green-600",
-  purple: "text-purple-600",
-  orange: "text-orange-600",
-  pink: "text-pink-600",
-  indigo: "text-indigo-600",
-  teal: "text-teal-600",
-  yellow: "text-yellow-600",
-  gray: "text-gray-600",
-  red: "text-red-600",
-};
-
-const iconSizeClasses = {
-  sm: "h-6 w-6",
-  md: "h-8 w-8",
-  lg: "h-12 w-12",
 };
 
 export function SimpleCard({
@@ -78,57 +47,61 @@ export function SimpleCard({
   count,
   icon: Icon,
   iconImage,
-  iconSize = "md",
+  iconSize: _iconSize,
   subtitle,
   countColor = "default",
-  iconBgColor = "gray",
+  iconBgColor: _iconBgColor,
   className,
 }: SimpleCardProps) {
-  const hasIcon = Icon || iconImage;
-
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle
-          className={cn(
-            "text-sm text-gray-500 font-semibold",
-            hasIcon ? "flex items-center justify-between" : ""
-          )}
+    <Card
+      className={cn(
+        "w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2",
+        className
+      )}
+      role="article"
+      aria-label={`${title} Statistics`}
+    >
+      <CardHeader className="flex flex-row items-center justify-between p-0 space-y-0">
+        <Heading
+          level={2}
+          className="text-sm font-medium text-[#767676] leading-[1.22]"
         >
           {title}
-          {iconImage && (
+        </Heading>
+        {Icon && (
+          <div className="rounded-full bg-[#F4F4F5] p-3">
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </div>
+        )}
+        {iconImage && (
+          <div className="rounded-full bg-[#F4F4F5] p-3">
             <img
               src={iconImage}
               alt={title}
-              className={cn("object-contain", iconSizeClasses[iconSize])}
+              className="h-5 w-5 object-contain"
               aria-hidden="true"
             />
-          )}
-          {Icon && !iconImage && (
-            <Icon
-              className={cn(
-                "h-8 w-8 rounded-full p-1.5 transition-all duration-200",
-                iconBgColors[iconBgColor],
-                iconColors[iconBgColor]
-              )}
-              aria-hidden="true"
-            />
-          )}
-        </CardTitle>
-
-        <span
+          </div>
+        )}
+      </CardHeader>
+      <Section aria-label={`${title} count`} className="p-0">
+        <p
           className={cn(
-            "text-xl text-gray-900 font-semibold mt-1",
-            countColorClasses[countColor]
+            "text-2xl font-semibold leading-[1.22]",
+            countColors[countColor] || countColors.default
           )}
         >
           {count}
-        </span>
-
-        {subtitle && (
-          <span className="text-sm text-gray-500 mt-1">{subtitle}</span>
-        )}
-      </CardHeader>
+        </p>
+      </Section>
+      {subtitle && (
+        <Section className="p-0">
+          <p className="text-sm font-medium text-[#515151] leading-[1.22]">
+            {subtitle}
+          </p>
+        </Section>
+      )}
     </Card>
   );
 }

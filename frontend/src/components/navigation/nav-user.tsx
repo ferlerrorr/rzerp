@@ -1,23 +1,10 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
+  SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuthStore } from "@/stores/auth";
-import { Link as RouterLink } from "@tanstack/react-router";
 
 export function NavUser({
   user,
@@ -28,14 +15,6 @@ export function NavUser({
     avatar: string;
   };
 }) {
-  const { isMobile } = useSidebar();
-  const { logout } = useAuthStore();
-
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = "/auth/login";
-  };
-
   const getUserInitials = (name: string) => {
     const words = name.trim().split(" ");
     if (words.length === 1) {
@@ -61,69 +40,30 @@ export function NavUser({
   };
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="px-2">
+      <SidebarGroupLabel className="text-gray-500 text-[10px] sm:text-xs font-semibold uppercase tracking-wider ">
+        Account
+      </SidebarGroupLabel>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="bg-sidebar-accent text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div
-                className={`h-8 w-8 ${getAvatarColor(
-                  user.name
-                )} rounded-full flex items-center justify-center flex-shrink-0`}
-              >
-                <span className="text-white text-xs font-semibold">
-                  {getUserInitials(user.name)}
-                </span>
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
+        <div className="bg-[#29333D] text-white rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 w-full flex items-center gap-2 sm:gap-3">
+          <div
+            className={`h-7 w-7 sm:h-8 sm:w-8 ${getAvatarColor(
+              user.name
+            )} rounded-full flex items-center justify-center flex-shrink-0`}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <div
-                  className={`h-8 w-8 sm:h-10 sm:w-10 ${getAvatarColor(
-                    user.name
-                  )} rounded-full flex items-center justify-center flex-shrink-0`}
-                >
-                  <span className="text-white text-xs sm:text-sm font-bold">
-                    {getUserInitials(user.name)}
-                  </span>
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <RouterLink to="/settings" className="flex items-center">
-                  <Settings />
-                  Settings
-                </RouterLink>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <span className="text-white text-[10px] sm:text-xs font-semibold">
+              {getUserInitials(user.name)}
+            </span>
+          </div>
+          <div className="grid flex-1 text-left text-xs sm:text-sm leading-tight min-w-0">
+            <span className="truncate font-semibold text-white">
+              {user.name}
+            </span>
+            <span className="truncate text-[10px] sm:text-xs text-white/70 hidden sm:block">
+              {user.email || `@${user.name.toLowerCase().replace(/\s+/g, "")}`}
+            </span>
+          </div>
+        </div>
       </SidebarMenuItem>
     </SidebarMenu>
   );

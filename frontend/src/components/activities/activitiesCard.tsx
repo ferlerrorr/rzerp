@@ -57,22 +57,24 @@ function ActivityItem({ activity, isLast }: ActivityItemProps) {
   return (
     <CardContent
       className={cn(
-        "flex items-start gap-3 py-4 px-6",
+        "flex items-start gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6",
         !isLast && "border-b border-gray-200"
       )}
     >
       <div
         className={cn(
-          "h-2 w-2 rounded-full mt-2 flex-shrink-0",
+          "h-2 w-2 rounded-full mt-1.5 sm:mt-2 flex-shrink-0",
           activityBgColors[color]
         )}
         aria-hidden="true"
       />
       <div className="flex flex-col flex-1 min-w-0">
-        <p className="text-sm font-medium leading-tight">{activity.title}</p>
-        <Paragraph className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm font-medium leading-tight break-words">
+          {activity.title}
+        </p>
+        <Paragraph className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
           <span className="font-semibold">{activity.author}</span>
-          <span className="mx-1">-</span>
+          <span className="mx-0.5 sm:mx-1">-</span>
           {activity.timeAgo}
         </Paragraph>
       </div>
@@ -88,19 +90,24 @@ export function ActivitiesCard({
   className,
 }: ActivitiesCardProps) {
   return (
-    <Card className={cn("rounded-2xl", className)}>
-      <CardHeader className="">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <Icon className="w-4 h-4" />
-          {title}
+    <Card
+      className={cn(
+        "border border-[#F4F4F5] rounded-2xl h-full flex flex-col",
+        className
+      )}
+    >
+      <CardHeader className="pb-3 sm:pb-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+          <span className="break-words">{title}</span>
         </CardTitle>
         {description && (
-          <CardDescription className="text-xs text-muted-foreground mt-1">
+          <CardDescription className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
             {description}
           </CardDescription>
         )}
       </CardHeader>
-      <div className="-mt-4 max-h-[400px] overflow-y-auto scrollbar-thin">
+      <div className="flex-1 -mt-2 sm:-mt-4 max-h-[300px] sm:max-h-[400px] lg:max-h-[500px] overflow-y-auto scrollbar-thin">
         <Section aria-label="Activities list">
           {data.map((activity, index) => (
             <ActivityItem

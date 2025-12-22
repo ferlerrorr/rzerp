@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
 import {
-  ChartAreaGradient,
-  AreaChartData,
-} from "@/components/charts/areaChart";
+  RevenueChart,
+  RevenueChartData,
+} from "@/components/charts/revenueChart";
 
 interface AttendanceData {
   present: number;
@@ -250,7 +250,7 @@ const dtrActions: ActionItem<DailyTimeRecord>[] = [
 ];
 
 // Attendance chart data
-const attendanceChartData: AreaChartData[] = [
+const attendanceChartData: RevenueChartData[] = [
   {
     month: "January",
     averageAttendance: 85,
@@ -309,14 +309,15 @@ export function AttendanceTab() {
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
       <div className="w-full">
-        <ChartAreaGradient
+        <RevenueChart
           data={attendanceChartData}
           config={attendanceChartConfig}
           title="Attendance Overview"
-          description="Showing attendance metrics for the last 6 months"
+          value="85%"
           xAxisKey="month"
           xAxisFormatter={(value) => value.slice(0, 3)}
-          height="150px"
+          height="200px"
+          filters={[]}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

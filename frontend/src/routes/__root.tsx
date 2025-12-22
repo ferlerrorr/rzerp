@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useMemo } from "react";
 import { Heading, Paragraph } from "@/components/semantic/index";
+import { cn } from "@/lib/utils";
 
 // Minimal pending screen shown while beforeLoad is resolving
 function PendingScreen() {
@@ -115,38 +116,15 @@ function RootComponent() {
   // If it's a route that should have sidebar and navbar, render with them
   if (shouldShowSidebar) {
     return (
-      <SidebarProvider>
-        <div className="flex h-screen w-full overflow-hidden">
-          {/* Sidebar */}
-          <AppSidebar />
-
-          {/* Main Content Area */}
-          <SidebarInset className="flex flex-col flex-1 min-w-0 overflow-hidden bg-gray-50">
-            <SiteHeader />
-
-            <main className="flex-1 p-4 md:p-8 min-h-0 overflow-hidden">
-              <div
-                ref={scrollableRef}
-                className="bg-white rounded-3xl shadow-sm h-full w-full overflow-auto p-5 sm:p-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-              >
-                <DynamicBreadcrumb />
-                {pageInfo && (
-                  <div className="mt-4 mb-6">
-                    <Heading level={1} className="text-lg font-semibold">
-                      {pageInfo.title}
-                    </Heading>
-                    {pageInfo.description && (
-                      <Paragraph className="text-xs text-muted-foreground">
-                        {pageInfo.description}
-                      </Paragraph>
-                    )}
-                  </div>
-                )}
-                <Outlet />
-              </div>
-            </main>
-          </SidebarInset>
-        </div>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "19.0625rem", // ~305px (64px left + 241px right)
+            "--sidebar-width-icon": "4rem", // 64px (left panel only when collapsed)
+          } as React.CSSProperties
+        }
+      >
+        <LayoutWithSidebar scrollableRef={scrollableRef} pageInfo={pageInfo} />
         <Toaster />
       </SidebarProvider>
     );
@@ -158,6 +136,53 @@ function RootComponent() {
       <Outlet />
       <Toaster />
     </>
+  );
+}
+
+// Component that uses sidebar state to adjust layout
+function LayoutWithSidebar({
+  scrollableRef,
+  pageInfo,
+}: {
+  scrollableRef: React.RefObject<HTMLDivElement>;
+  pageInfo: { title: string; description?: string } | null;
+}) {
+  return (
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Sidebar */}
+      <AppSidebar />
+
+      {/* Main Content Area - Adjusts based on sidebar state */}
+      <SidebarInset
+        className={cn(
+          "flex flex-col flex-1 min-w-0 overflow-hidden bg-gray-50 transition-all duration-200 ease-linear"
+        )}
+      >
+        <SiteHeader />
+
+        <main className="flex-1 p-4 md:p-8 min-h-0 overflow-hidden">
+          <div
+            ref={scrollableRef}
+            className="bg-white rounded-3xl shadow-sm h-full w-full overflow-auto p-5 sm:p-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            <DynamicBreadcrumb />
+            {pageInfo && (
+              <div className="mt-4 mb-6">
+                <Heading level={1} className="text-lg font-semibold">
+                  {pageInfo.title}
+                </Heading>
+                {pageInfo.description && (
+                  <Paragraph className="text-xs text-muted-foreground">
+                    {pageInfo.description}
+                  </Paragraph>
+                )}
+              </div>
+            )}
+            <Outlet />
+          </div>
+        </main>
+      </SidebarInset>
+    </div>
   );
 }
 
