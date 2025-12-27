@@ -20,6 +20,66 @@ use App\Http\Controllers\Api\PositionController;
 // Public routes
 Route::get('/health', [HealthController::class, 'index']);
 
+// CSRF cookie endpoint (proxies to RZ Auth)
+Route::get('/csrf-cookie', function (\Illuminate\Http\Request $request) {
+    $result = \App\Models\User::forwardRzAuthRequest('GET', '/csrf-cookie');
+    
+    $statusCode = $result['status'] ?? ($result['success'] ? 200 : 500);
+    $response = response()->json($result['data'] ?? ['success' => $result['success']], $statusCode);
+    
+    // Forward cookies from RZ Auth response
+    if (isset($result['cookies']) && is_array($result['cookies'])) {
+        foreach ($result['cookies'] as $cookie) {
+            $cookieParts = explode(';', $cookie);
+            if (!empty($cookieParts)) {
+                $nameValue = explode('=', trim($cookieParts[0]), 2);
+                if (count($nameValue) === 2) {
+                    $cookieName = trim($nameValue[0]);
+                    $cookieValue = trim($nameValue[1]);
+                    
+                    $domain = null;
+                    $path = '/';
+                    $secure = false;
+                    $httpOnly = true;
+                    $sameSite = 'lax';
+                    $maxAge = 120; // Default 2 hours
+
+                    foreach (array_slice($cookieParts, 1) as $part) {
+                        $part = trim(strtolower($part));
+                        if (str_starts_with($part, 'domain=')) {
+                            $domain = trim(substr($part, 7));
+                        } elseif (str_starts_with($part, 'path=')) {
+                            $path = trim(substr($part, 5));
+                        } elseif ($part === 'secure') {
+                            $secure = true;
+                        } elseif ($part === 'httponly') {
+                            $httpOnly = true;
+                        } elseif (str_starts_with($part, 'samesite=')) {
+                            $sameSite = trim(substr($part, 9));
+                        } elseif (str_starts_with($part, 'max-age=')) {
+                            $maxAge = (int) trim(substr($part, 8)) / 60; // Convert to minutes
+                        }
+                    }
+
+                    $response->cookie(
+                        $cookieName,
+                        $cookieValue,
+                        $maxAge,
+                        $path,
+                        $domain,
+                        $secure,
+                        $httpOnly,
+                        false,
+                        $sameSite
+                    );
+                }
+            }
+        }
+    }
+    
+    return $response;
+});
+
 // Authentication routes
 Route::prefix('auth')->group(function () {
     Route::post('/login', [UserController::class, 'login']);
@@ -38,32 +98,24 @@ Route::prefix('auth')->group(function () {
 // User endpoint (matches frontend expectation)
 
 // Protected routes (require authentication)
-Route::middleware('auth:sanctum')->group(function () {
-
-
-     Route::get('/user', [UserController::class, 'me']);
-     
-     // Email verification and password management
-     Route::post('/resend-verification-email', [UserController::class, 'resendVerificationEmail']);
-     Route::post('/change-password', [UserController::class, 'changePassword']);
+Route::middleware('rz.auth')->group(function () {
+    Route::get('/user', [UserController::class, 'me']);
+    Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view');
+    Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.create');
+    Route::get('/users/{id}', [UserController::class, 'show'])->middleware('permission:users.view');
+    Route::put('/users/{id}', [UserController::class, 'update'])->middleware('permission:users.update');
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])->middleware('permission:users.delete');
+    Route::post('/users/{id}/roles', [UserController::class, 'assignRoles'])->middleware('permission:users.update');
+    Route::get('/roles', [UserController::class, 'roles'])->middleware('permission:users.view');
+    
+    // Email verification and password management
+    Route::post('/resend-verification-email', [UserController::class, 'resendVerificationEmail']);
+    Route::post('/change-password', [UserController::class, 'changePassword']);
     
     // HRIS routes with permission checks
     Route::prefix('hris')->group(function () {
         Route::get('/', [HrisController::class, 'index'])->middleware('permission:hris.view');
         Route::get('/employees', [HrisController::class, 'employees'])->middleware('permission:hris.view');
-    });
-
-    // Roles endpoint (for user management)
-    Route::get('/roles', [UserController::class, 'roles'])->middleware('permission:users.view');
-
-    // User management routes with permission checks
-    Route::prefix('users')->group(function () {
-        Route::get('/', [UserController::class, 'index'])->middleware('permission:users.view');
-        Route::post('/', [UserController::class, 'store'])->middleware('permission:users.create');
-        Route::get('/{id}', [UserController::class, 'show'])->middleware('permission:users.view');
-        Route::put('/{id}', [UserController::class, 'update'])->middleware('permission:users.update');
-        Route::delete('/{id}', [UserController::class, 'destroy'])->middleware('permission:users.delete');
-        Route::post('/{id}/roles', [UserController::class, 'assignRoles'])->middleware('permission:users.update');
     });
 
     // Employee management routes with permission checks

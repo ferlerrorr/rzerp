@@ -19,6 +19,9 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
+use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Exception\GuzzleException;
 
 class User extends Authenticatable
 {
@@ -58,6 +61,167 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get RZ Auth service HTTP client
+     *
+     * @return Client
+     */
+    protected static function rzAuthClient(): Client
+    {
+        $baseUrl = config('services.rz_auth.url', 'http://localhost:8888');
+        
+        return new Client([
+            'base_uri' => $baseUrl,
+            'cookies' => true,
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 30,
+            'http_errors' => false,
+        ]);
+    }
+
+    /**
+     * Initialize CSRF token with RZ Auth
+     *
+     * @return bool
+     */
+    protected static function initializeRzAuthCSRF(): bool
+    {
+        try {
+            $client = self::rzAuthClient();
+            $response = $client->get('/csrf-cookie');
+            return $response->getStatusCode() === 200;
+        } catch (GuzzleException $e) {
+            Log::error('RZ Auth CSRF initialization failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Forward request to RZ Auth service
+     *
+     * @param string $method
+     * @param string $endpoint
+     * @param array<string, mixed> $data
+     * @param array<string, string> $headers
+     * @param string|null $sessionCookie
+     * @param string|null $xsrfToken
+     * @return array<string, mixed>
+     */
+    public static function forwardRzAuthRequest(
+        string $method,
+        string $endpoint,
+        array $data = [],
+        array $headers = [],
+        ?string $sessionCookie = null,
+        ?string $xsrfToken = null
+    ): array {
+        try {
+            $baseUrl = config('services.rz_auth.url', 'http://localhost:8888');
+            $sessionCookieName = config('services.rz_auth.session_cookie', 'rzauth-session');
+            
+            $cookieJar = new CookieJar();
+            if ($sessionCookie) {
+                $domain = parse_url($baseUrl, PHP_URL_HOST);
+                $cookieJar->setCookie(new \GuzzleHttp\Cookie\SetCookie([
+                    'Name' => $sessionCookieName,
+                    'Value' => $sessionCookie,
+                    'Domain' => $domain,
+                    'Path' => '/',
+                ]));
+            }
+
+            if ($xsrfToken) {
+                $headers['X-XSRF-TOKEN'] = $xsrfToken;
+            }
+
+            $client = new Client([
+                'base_uri' => $baseUrl,
+                'cookies' => $cookieJar,
+                'headers' => array_merge([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ], $headers),
+                'timeout' => 30,
+                'http_errors' => false,
+            ]);
+
+            $options = [
+                'headers' => array_merge([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ], $headers),
+            ];
+
+            if (!empty($data)) {
+                if (strtoupper($method) === 'GET') {
+                    $options['query'] = $data;
+                } else {
+                    $options['json'] = $data;
+                }
+            }
+
+            $response = $client->request($method, $endpoint, $options);
+            
+            $statusCode = $response->getStatusCode();
+            $body = json_decode($response->getBody()->getContents(), true);
+
+            // Forward cookies from response
+            $cookies = [];
+            if ($response->hasHeader('Set-Cookie')) {
+                foreach ($response->getHeader('Set-Cookie') as $cookie) {
+                    $cookies[] = $cookie;
+                }
+            }
+
+            return [
+                'success' => $statusCode >= 200 && $statusCode < 300,
+                'status' => $statusCode,
+                'data' => $body ?? [],
+                'cookies' => $cookies,
+            ];
+        } catch (GuzzleException $e) {
+            Log::error('RZ Auth request failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'status' => 500,
+                'data' => [
+                    'success' => false,
+                    'message' => 'Service unavailable',
+                ],
+                'cookies' => [],
+            ];
+        }
+    }
+
+    /**
+     * Get session cookie from request
+     *
+     * @param Request $request
+     * @return string|null
+     */
+    public static function getSessionCookie(Request $request): ?string
+    {
+        $sessionCookieName = config('services.rz_auth.session_cookie', 'rzauth-session');
+        return $request->cookie($sessionCookieName)
+            ?? $request->cookie('laravel_session')
+            ?? $request->cookie('laravel-session');
+    }
+
+    /**
+     * Get XSRF token from request
+     *
+     * @param Request $request
+     * @return string|null
+     */
+    public static function getXsrfToken(Request $request): ?string
+    {
+        return $request->cookie('XSRF-TOKEN') ?? $request->header('X-XSRF-TOKEN');
+    }
+
 
     /**
      * Get a model instance for the roles table using Eloquent.
@@ -337,7 +501,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Login user
+     * Login user (proxies to RZ Auth)
      *
      * @param array<string, mixed> $credentials
      * @param Request $request
@@ -345,28 +509,23 @@ class User extends Authenticatable
      */
     public static function login(array $credentials, Request $request): array
     {
-        $user = self::where('email', $credentials['email'])->first();
+        self::initializeRzAuthCSRF();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            return [
-                'success' => false,
-                'message' => 'Invalid credentials',
-            ];
-        }
-
-        Auth::login($user);
-
-        // Handle session setup
-        self::handleLoginSession($request, $user->id);
+        $result = self::forwardRzAuthRequest('POST', '/api/auth/login', [
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ]);
 
         return [
-            'success' => true,
-            'user' => $user->toAuthArray(),
+            'success' => $result['success'],
+            'status' => $result['status'] ?? ($result['success'] ? 200 : 401),
+            'data' => $result['data'],
+            'cookies' => $result['cookies'] ?? [],
         ];
     }
 
     /**
-     * Register new user
+     * Register new user (proxies to RZ Auth)
      *
      * @param array<string, mixed> $data
      * @param Request $request
@@ -374,32 +533,39 @@ class User extends Authenticatable
      */
     public static function register(array $data, Request $request): array
     {
-        $user = self::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
+        self::initializeRzAuthCSRF();
 
-        Auth::login($user);
-
-        // Handle session setup
-        self::handleRegisterSession($request, $user->id);
+        $result = self::forwardRzAuthRequest('POST', '/api/auth/register', $data);
 
         return [
-            'success' => true,
-            'user' => $user->toAuthArray(),
+            'success' => $result['success'],
+            'status' => $result['status'] ?? ($result['success'] ? 201 : 422),
+            'data' => $result['data'],
+            'cookies' => $result['cookies'] ?? [],
         ];
     }
 
     /**
-     * Logout user
+     * Logout user (proxies to RZ Auth)
      *
-     * @param User $user
-     * @return void
+     * @param Request $request
+     * @return array<string, mixed>
      */
-    public static function logout(User $user): void
+    public static function logout(Request $request): array
     {
-        Auth::logout();
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
+
+        $result = self::forwardRzAuthRequest(
+            'POST',
+            '/api/auth/logout',
+            [],
+            [],
+            $sessionCookie ?? '',
+            $xsrfToken ?? ''
+        );
+
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to logout'];
     }
 
     /**
@@ -758,266 +924,221 @@ class User extends Authenticatable
     }
 
     /**
-     * Get list of users with pagination
+     * Get list of users with pagination (proxies to RZ Auth)
      *
      * @param array<string, mixed> $filters
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function getUsers(array $filters = []): array
+    public static function getUsers(array $filters = [], Request $request): array
     {
-        $query = self::with('roles');
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-        // Apply filters
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+        if (!$sessionCookie) {
+            return [
+                'success' => false,
+                'message' => 'Not authenticated',
+            ];
         }
 
-        $perPage = $filters['per_page'] ?? 15;
-        $users = $query->paginate($perPage);
+        $result = self::forwardRzAuthRequest(
+            'GET',
+            '/api/users',
+            $filters,
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
 
-        return [
-            'users' => $users->items(),
-            'pagination' => [
-                'current_page' => $users->currentPage(),
-                'last_page' => $users->lastPage(),
-                'per_page' => $users->perPage(),
-                'total' => $users->total(),
-            ],
-        ];
+        return $result['data'] ?? [];
     }
 
     /**
-     * Get a single user with roles and permissions
+     * Get a single user with roles and permissions (proxies to RZ Auth)
      *
      * @param int $id
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function getUserById(int $id): array
+    public static function getUserById(int $id, Request $request): array
     {
-        $user = self::with('roles')->find($id);
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-        if (!$user) {
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'User not found',
+                'message' => 'Not authenticated',
             ];
         }
 
-        // Get all permissions through roles
-        $roleIds = $user->roles->pluck('id')->toArray();
-        $permissions = empty($roleIds) ? [] : self::permissionQuery()
-            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-            ->whereIn('role_permission.role_id', $roleIds)
-            ->distinct()
-            ->pluck('permissions.name')
-            ->toArray();
+        $result = self::forwardRzAuthRequest(
+            'GET',
+            "/api/users/{$id}",
+            [],
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
 
-        return [
-            'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'email_verified_at' => $user->email_verified_at,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-                'roles' => $user->roles->pluck('name')->toArray(),
-                'permissions' => $permissions,
-            ],
-        ];
+        return $result['data'] ?? ['success' => false, 'message' => 'User not found'];
     }
 
     /**
-     * Create a new user
+     * Create a new user (proxies to RZ Auth)
      *
      * @param array<string, mixed> $data
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function createUser(array $data): array
+    public static function createUser(array $data, Request $request): array
     {
-        try {
-            return self::getConnection()->transaction(function () use ($data) {
-                $user = self::create([
-                    'name' => $data['name'],
-                    'email' => $data['email'],
-                    'password' => Hash::make($data['password']),
-                ]);
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-                // Assign roles if provided
-                if (isset($data['role_ids']) && is_array($data['role_ids'])) {
-                    $user->roles()->sync($data['role_ids']);
-                }
-
-                $user->load('roles');
-                $roleIds = $user->roles->pluck('id')->toArray();
-                $permissions = empty($roleIds) ? [] : self::permissionQuery()
-                    ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-                    ->whereIn('role_permission.role_id', $roleIds)
-                    ->distinct()
-                    ->pluck('permissions.name')
-                    ->toArray();
-
-                return [
-                    'success' => true,
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'roles' => $user->roles->pluck('name')->toArray(),
-                        'permissions' => $permissions,
-                    ],
-                ];
-            });
-        } catch (\Exception $e) {
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'Failed to create user: ' . $e->getMessage(),
+                'message' => 'Not authenticated',
             ];
         }
+
+        $result = self::forwardRzAuthRequest(
+            'POST',
+            '/api/users',
+            $data,
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
+
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to create user'];
     }
 
     /**
-     * Update a user
+     * Update a user (proxies to RZ Auth)
      *
      * @param int $id
      * @param array<string, mixed> $data
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function updateUserById(int $id, array $data): array
+    public static function updateUserById(int $id, array $data, Request $request): array
     {
-        $user = self::find($id);
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-        if (!$user) {
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'User not found',
-                'status' => 404,
+                'message' => 'Not authenticated',
             ];
         }
 
-        try {
-            return $user->getConnection()->transaction(function () use ($user, $data) {
-                $updateData = [
-                    'name' => $data['name'],
-                    'email' => $data['email'],
-                ];
+        $result = self::forwardRzAuthRequest(
+            'PUT',
+            "/api/users/{$id}",
+            $data,
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
 
-                if (isset($data['password']) && !empty($data['password'])) {
-                    $updateData['password'] = Hash::make($data['password']);
-                }
-
-                $user->update($updateData);
-
-                // Update roles if provided
-                if (isset($data['role_ids']) && is_array($data['role_ids'])) {
-                    $user->roles()->sync($data['role_ids']);
-                }
-
-                $user->load('roles');
-                $roleIds = $user->roles->pluck('id')->toArray();
-                $permissions = empty($roleIds) ? [] : self::permissionQuery()
-                    ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-                    ->whereIn('role_permission.role_id', $roleIds)
-                    ->distinct()
-                    ->pluck('permissions.name')
-                    ->toArray();
-
-                return [
-                    'success' => true,
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'roles' => $user->roles->pluck('name')->toArray(),
-                        'permissions' => $permissions,
-                    ],
-                ];
-            });
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Failed to update user: ' . $e->getMessage(),
-            ];
-        }
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to update user'];
     }
 
     /**
-     * Delete a user
+     * Delete a user (proxies to RZ Auth)
      *
      * @param int $id
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function deleteUserById(int $id): array
+    public static function deleteUserById(int $id, Request $request): array
     {
-        $user = self::find($id);
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-        if (!$user) {
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'User not found',
-                'status' => 404,
+                'message' => 'Not authenticated',
             ];
         }
 
-        // Prevent deleting super-admin
-        if ($user->hasRole('super-admin')) {
-            return [
-                'success' => false,
-                'message' => 'Cannot delete super-admin user',
-                'status' => 403,
-            ];
-        }
+        $result = self::forwardRzAuthRequest(
+            'DELETE',
+            "/api/users/{$id}",
+            [],
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
 
-        $user->delete();
-
-        return [
-            'success' => true,
-        ];
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to delete user'];
     }
 
     /**
-     * Assign roles to a user
+     * Assign roles to a user (proxies to RZ Auth)
      *
      * @param int $userId
      * @param array<int> $roleIds
+     * @param Request $request
      * @return array<string, mixed>
      */
-    public static function assignRolesToUser(int $userId, array $roleIds): array
+    public static function assignRolesToUser(int $userId, array $roleIds, Request $request): array
     {
-        $user = self::find($userId);
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
 
-        if (!$user) {
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'User not found',
+                'message' => 'Not authenticated',
             ];
         }
 
-        $user->roles()->sync($roleIds);
-        $user->load('roles');
+        $result = self::forwardRzAuthRequest(
+            'POST',
+            "/api/users/{$userId}/roles",
+            ['role_ids' => $roleIds],
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
 
-        $roleIds = $user->roles->pluck('id')->toArray();
-        $permissions = empty($roleIds) ? [] : self::permissionQuery()
-            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-            ->whereIn('role_permission.role_id', $roleIds)
-            ->distinct()
-            ->pluck('permissions.name')
-            ->toArray();
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to assign roles'];
+    }
 
-        return [
-            'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->roles->pluck('name')->toArray(),
-                'permissions' => $permissions,
-            ],
-        ];
+    /**
+     * Get roles list (proxies to RZ Auth)
+     *
+     * @param Request $request
+     * @return array<string, mixed>
+     */
+    public static function getRoles(Request $request): array
+    {
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
+
+        if (!$sessionCookie) {
+            return [
+                'success' => false,
+                'message' => 'Not authenticated',
+            ];
+        }
+
+        $result = self::forwardRzAuthRequest(
+            'GET',
+            '/api/roles',
+            [],
+            [],
+            $sessionCookie,
+            $xsrfToken
+        );
+
+        return $result['data'] ?? ['success' => false, 'data' => []];
     }
 
     /**
@@ -1245,59 +1366,22 @@ class User extends Authenticatable
     }
 
     /**
-     * Send password reset notification.
+     * Send password reset notification (proxies to RZ Auth)
      *
      * @param string $email
      * @return array<string, mixed>
      */
     public static function sendPasswordResetEmail(string $email): array
     {
-        $user = self::where('email', $email)->first();
+        $result = self::forwardRzAuthRequest('POST', '/api/auth/forgot-password', [
+            'email' => $email,
+        ]);
 
-        if (!$user) {
-            // Don't reveal if email exists for security
-            return [
-                'success' => true,
-                'message' => 'If the email exists, a password reset link has been sent',
-            ];
-        }
-
-        try {
-            $token = Str::random(64);
-            $resetUrl = config('app.url') . '/api/auth/reset-password?token=' . $token . '&email=' . urlencode($email);
-
-            // Store reset token in password_reset_tokens table
-            self::passwordResetTokenModel()->updateOrCreate(
-                ['email' => $email],
-                [
-                    'token' => Hash::make($token),
-                    'created_at' => now(),
-                ]
-            );
-
-            // Send email
-            Mail::raw("Click this link to reset your password: {$resetUrl}", function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject('Reset Your Password');
-            });
-
-            Log::info("Password reset email sent to user {$user->id}");
-
-            return [
-                'success' => true,
-                'message' => 'If the email exists, a password reset link has been sent',
-            ];
-        } catch (\Exception $e) {
-            Log::error('Failed to send password reset email: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Failed to send password reset email',
-            ];
-        }
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to send password reset email'];
     }
 
     /**
-     * Reset user password.
+     * Reset user password (proxies to RZ Auth)
      *
      * @param string $email
      * @param string $token
@@ -1306,85 +1390,78 @@ class User extends Authenticatable
      */
     public static function resetPassword(string $email, string $token, string $password): array
     {
-        $user = self::where('email', $email)->first();
+        $result = self::forwardRzAuthRequest('POST', '/api/auth/reset-password', [
+            'email' => $email,
+            'token' => $token,
+            'password' => $password,
+        ]);
 
-        if (!$user) {
-            return [
-                'success' => false,
-                'message' => 'Invalid reset token',
-            ];
-        }
-
-        // Get reset token record
-        $resetRecord = self::passwordResetTokenQuery()->where('email', $email)->first();
-
-        if (!$resetRecord) {
-            return [
-                'success' => false,
-                'message' => 'Invalid or expired reset token',
-            ];
-        }
-
-        // Check if token is valid (within 60 minutes)
-        $tokenAge = now()->diffInMinutes($resetRecord->created_at);
-        if ($tokenAge > 60) {
-            $resetRecord->delete();
-            return [
-                'success' => false,
-                'message' => 'Reset token has expired',
-            ];
-        }
-
-        // Verify token
-        if (!Hash::check($token, $resetRecord->token)) {
-            return [
-                'success' => false,
-                'message' => 'Invalid reset token',
-            ];
-        }
-
-        // Update password
-        $user->password = Hash::make($password);
-        $user->save();
-
-        // Delete reset token
-        $resetRecord->delete();
-
-        Log::info("Password reset successful for user {$user->id}");
-
-        return [
-            'success' => true,
-            'message' => 'Password reset successfully',
-        ];
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to reset password'];
     }
 
     /**
-     * Change user password.
+     * Change user password (proxies to RZ Auth)
      *
-     * @param User $user
+     * @param Request $request
      * @param string $currentPassword
      * @param string $newPassword
      * @return array<string, mixed>
      */
-    public static function changePassword(User $user, string $currentPassword, string $newPassword): array
+    public static function changePassword(Request $request, string $currentPassword, string $newPassword): array
     {
-        // Verify current password
-        if (!Hash::check($currentPassword, $user->password)) {
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
+
+        if (!$sessionCookie) {
             return [
                 'success' => false,
-                'message' => 'Current password is incorrect',
+                'message' => 'Not authenticated',
             ];
         }
 
-        // Update password
-        $user->password = Hash::make($newPassword);
-        $user->save();
+        $result = self::forwardRzAuthRequest(
+            'POST',
+            '/api/change-password',
+            [
+                'current_password' => $currentPassword,
+                'password' => $newPassword,
+            ],
+            [],
+            $sessionCookie,
+            $xsrfToken ?? ''
+        );
 
-        Log::info("Password changed for user {$user->id}");
+        return $result['data'] ?? ['success' => false, 'message' => 'Failed to change password'];
+    }
 
-        return [
-            'success' => true,
-            'message' => 'Password changed successfully',
-        ];
+    /**
+     * Get current authenticated user (proxies to RZ Auth)
+     *
+     * @param Request $request
+     * @return array<string, mixed>
+     */
+    public static function getCurrentUser(Request $request): array
+    {
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
+
+        if (!$sessionCookie) {
+            return [
+                'success' => false,
+                'message' => 'Not authenticated',
+            ];
+        }
+
+        $result = self::forwardRzAuthRequest(
+            'GET',
+            '/api/user',
+            [],
+            [],
+            $sessionCookie,
+            $xsrfToken ?? ''
+        );
+
+        return $result['data'] ?? ['success' => false, 'message' => 'Not authenticated'];
     }
 }
+

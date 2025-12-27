@@ -28,11 +28,14 @@ class CheckPermission
         }
 
         // Super admin bypass
-        if ($user->hasRole('super-admin')) {
+        $roles = is_array($user->roles) ? $user->roles : [];
+        if (in_array('super-admin', $roles)) {
             return $next($request);
         }
 
-        if (!$user->hasPermission($permission)) {
+        // Check permission
+        $permissions = is_array($user->permissions) ? $user->permissions : [];
+        if (!in_array($permission, $permissions)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have access to this action.',

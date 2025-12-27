@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'rz_auth' => [
+        'url' => env('AUTH_URL'),
+    ],
+
 ];

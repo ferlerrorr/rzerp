@@ -6,74 +6,72 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
     /**
-     * Get list of users
+     * List users
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
-        $result = User::getUsers($request->all());
+        $filters = [
+            'search' => $request->query('search'),
+            'per_page' => $request->query('per_page', 15),
+        ];
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Users retrieved successfully',
-            'data' => $result,
-        ]);
+        $result = User::getUsers($filters, $request);
+
+        if (isset($result['success']) && !$result['success']) {
+            return response()->json($result, 401);
+        }
+
+        return response()->json($result);
     }
 
     /**
      * Get a single user
      *
+     * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $result = User::getUserById($id);
+        $result = User::getUserById($id, $request);
 
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 404);
+        if (isset($result['success']) && !$result['success']) {
+            $statusCode = $result['status'] ?? 404;
+            return response()->json($result, $statusCode);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User retrieved successfully',
-            'data' => $result['user'],
-        ]);
+        return response()->json($result);
     }
 
     /**
-     * Create a new user
+     * Create a user
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = User::validateStore($request->all());
-        $result = User::createUser($validated);
-
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'errors' => $result['errors'] ?? [],
-            ], 422);
+        try {
+            $data = User::validateStore($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'data' => $result['user'],
-        ], 201);
+        $result = User::createUser($data, $request);
+
+        if (isset($result['success']) && !$result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result, 201);
     }
 
     /**
@@ -85,45 +83,39 @@ class UserController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $validated = User::validateUpdate($request->all(), $id);
-        $result = User::updateUserById($id, $validated);
-
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'errors' => $result['errors'] ?? [],
-            ], $result['status'] ?? 404);
+        try {
+            $data = User::validateUpdate($request->all(), $id);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'data' => $result['user'],
-        ]);
+        $result = User::updateUserById($id, $data, $request);
+
+        if (isset($result['success']) && !$result['success']) {
+            $statusCode = $result['status'] ?? 400;
+            return response()->json($result, $statusCode);
+        }
+
+        return response()->json($result);
     }
 
     /**
      * Delete a user
      *
+     * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $result = User::deleteUserById($id);
+        $result = User::deleteUserById($id, $request);
 
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], $result['status'] ?? 404);
+        if (isset($result['success']) && !$result['success']) {
+            $statusCode = $result['status'] ?? 404;
+            return response()->json($result, $statusCode);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User deleted successfully',
-        ]);
+        return response()->json($result);
     }
 
     /**
@@ -140,49 +132,82 @@ class UserController extends Controller
             'role_ids.*' => 'exists:roles,id',
         ]);
 
-        $result = User::assignRolesToUser($id, $request->role_ids);
+        $result = User::assignRolesToUser($id, $request->role_ids, $request);
 
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 404);
+        if (isset($result['success']) && !$result['success']) {
+            return response()->json($result, 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Roles assigned successfully',
-            'data' => $result['user'],
-        ]);
+        return response()->json($result);
     }
 
     /**
-     * Get list of all roles
+     * Get roles list
      *
+     * @param Request $request
      * @return JsonResponse
      */
-    public function roles(): JsonResponse
+    public function roles(Request $request): JsonResponse
     {
-        $roles = User::roleQuery()->get();
+        $result = User::getRoles($request);
 
+        if (isset($result['success']) && !$result['success']) {
+            return response()->json($result, 401);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Get current authenticated user
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not authenticated',
+            ], 401);
+        }
+
+        // Ensure we have a User model instance with roles and permissions
+        if ($user instanceof User) {
+            $user->load('roles');
+            $roleIds = $user->roles->pluck('id')->toArray();
+            $permissions = empty($roleIds) ? [] : User::permissionQuery()
+                ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+                ->whereIn('role_permission.role_id', $roleIds)
+                ->distinct()
+                ->pluck('permissions.name')
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'roles' => $user->roles->pluck('name')->toArray(),
+                    'permissions' => $permissions,
+                ],
+            ]);
+        }
+
+        // Fallback for anonymous user objects from middleware
         return response()->json([
             'success' => true,
-            'message' => 'Roles retrieved successfully',
-            'data' => $roles->map(function ($role) {
-                // Get permissions for this role
-                $roleId = $role->id;
-                $permissions = User::permissionQuery()
-                    ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-                    ->where('role_permission.role_id', $roleId)
-                    ->pluck('permissions.name')
-                    ->toArray();
-
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'permissions' => $permissions,
-                ];
-            }),
+            'data' => [
+                'id' => $user->id ?? 0,
+                'name' => $user->name ?? '',
+                'email' => $user->email ?? '',
+                'roles' => is_array($user->roles ?? null) ? $user->roles : [],
+                'permissions' => is_array($user->permissions ?? null) ? $user->permissions : [],
+            ],
         ]);
     }
 
@@ -194,22 +219,67 @@ class UserController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
-        $validated = User::validateLogin($request->all());
-        $result = User::login($validated, $request);
-
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'errors' => $result['errors'] ?? [],
-            ], 401);
+        try {
+            $credentials = User::validateLogin($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => $result['user'],
-        ]);
+        $result = User::login($credentials, $request);
+        $statusCode = $result['status'] ?? ($result['success'] ? 200 : 401);
+        $response = response()->json($result['data'], $statusCode);
+
+        // Forward cookies from RZ Auth response
+        if (isset($result['cookies']) && is_array($result['cookies'])) {
+            foreach ($result['cookies'] as $cookie) {
+                $cookieParts = explode(';', $cookie);
+                if (!empty($cookieParts)) {
+                    $nameValue = explode('=', trim($cookieParts[0]), 2);
+                    if (count($nameValue) === 2) {
+                        $cookieName = trim($nameValue[0]);
+                        $cookieValue = trim($nameValue[1]);
+                        
+                        $domain = null;
+                        $path = '/';
+                        $secure = false;
+                        $httpOnly = true;
+                        $sameSite = 'lax';
+                        $maxAge = null;
+
+                        foreach (array_slice($cookieParts, 1) as $part) {
+                            $part = trim(strtolower($part));
+                            if (str_starts_with($part, 'domain=')) {
+                                $domain = trim(substr($part, 7));
+                            } elseif (str_starts_with($part, 'path=')) {
+                                $path = trim(substr($part, 5));
+                            } elseif ($part === 'secure') {
+                                $secure = true;
+                            } elseif ($part === 'httponly') {
+                                $httpOnly = true;
+                            } elseif (str_starts_with($part, 'samesite=')) {
+                                $sameSite = trim(substr($part, 9));
+                            } elseif (str_starts_with($part, 'max-age=')) {
+                                $maxAge = (int) trim(substr($part, 8));
+                            }
+                        }
+
+                        $response->cookie(
+                            $cookieName,
+                            $cookieValue,
+                            $maxAge ? $maxAge / 60 : 120,
+                            $path,
+                            $domain,
+                            $secure,
+                            $httpOnly,
+                            false,
+                            $sameSite
+                        );
+                    }
+                }
+            }
+        }
+
+        return $response;
     }
 
     /**
@@ -220,69 +290,67 @@ class UserController extends Controller
      */
     public function register(Request $request): JsonResponse
     {
-        $validated = User::validateRegister($request->all());
-        $result = User::register($validated, $request);
-
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'errors' => $result['errors'] ?? [],
-            ], 422);
+        try {
+            $data = User::validateRegister($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Registration successful',
-            'data' => $result['user'],
-        ], 201);
-    }
+        $result = User::register($data, $request);
+        $statusCode = $result['status'] ?? ($result['success'] ? 201 : 422);
+        $response = response()->json($result['data'], $statusCode);
 
-    /**
-     * Get current authenticated user
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function me(Request $request): JsonResponse
-    {
-        // Validate session
-        $sessionValidation = User::validateSession($request);
-        
-        if (!$sessionValidation['valid']) {
-            $response = response()->json([
-                'success' => false,
-                'message' => $sessionValidation['message'] ?? 'Session not found in database',
-            ], 401);
-            
-            return $this->expireSessionCookie($response);
-        }
-        
-        $user = $request->user();
-        
-        // If no user is authenticated, return 401
-        if (!$user) {
-            // If we have a session but no user, destroy it to prevent reuse
-            if ($request->hasSession()) {
-                try {
-                    $request->session()->invalidate();
-                } catch (\Exception $e) {
-                    // Ignore errors
+        // Forward cookies from RZ Auth response
+        if (isset($result['cookies']) && is_array($result['cookies'])) {
+            foreach ($result['cookies'] as $cookie) {
+                $cookieParts = explode(';', $cookie);
+                if (!empty($cookieParts)) {
+                    $nameValue = explode('=', trim($cookieParts[0]), 2);
+                    if (count($nameValue) === 2) {
+                        $cookieName = trim($nameValue[0]);
+                        $cookieValue = trim($nameValue[1]);
+                        
+                        $domain = null;
+                        $path = '/';
+                        $secure = false;
+                        $httpOnly = true;
+                        $sameSite = 'lax';
+                        $maxAge = null;
+
+                        foreach (array_slice($cookieParts, 1) as $part) {
+                            $part = trim(strtolower($part));
+                            if (str_starts_with($part, 'domain=')) {
+                                $domain = trim(substr($part, 7));
+                            } elseif (str_starts_with($part, 'path=')) {
+                                $path = trim(substr($part, 5));
+                            } elseif ($part === 'secure') {
+                                $secure = true;
+                            } elseif ($part === 'httponly') {
+                                $httpOnly = true;
+                            } elseif (str_starts_with($part, 'samesite=')) {
+                                $sameSite = trim(substr($part, 9));
+                            } elseif (str_starts_with($part, 'max-age=')) {
+                                $maxAge = (int) trim(substr($part, 8));
+                            }
+                        }
+
+                        $response->cookie(
+                            $cookieName,
+                            $cookieValue,
+                            $maxAge ? $maxAge / 60 : 120,
+                            $path,
+                            $domain,
+                            $secure,
+                            $httpOnly,
+                            false,
+                            $sameSite
+                        );
+                    }
                 }
             }
-            
-            $response = response()->json([
-                'success' => false,
-                'message' => 'Not authenticated',
-            ], 401);
-            
-            return $this->expireSessionCookie($response);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $user->toAuthArray(),
-        ]);
+        return $response;
     }
 
     /**
@@ -293,28 +361,21 @@ class UserController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $userId = $user ? $user->id : null;
-        
-        if ($user) {
-            User::logout($user);
-        }
-        
-        // Handle session deletion
-        User::handleLogoutSession($request, $userId);
+        $result = User::logout($request);
+        $statusCode = $result['status'] ?? ($result['success'] ? 200 : 401);
+        $response = response()->json($result, $statusCode);
 
-        // Create response and expire session cookie
-        $response = response()->json([
-            'success' => true,
-            'message' => 'Logout successful',
-        ]);
-        
-        // Add headers to prevent caching
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
-        
-        return $this->expireSessionCookie($response);
+        // Expire session cookies
+        $cookieName = config('session.cookie', 'laravel_session');
+        $path = config('session.path', '/');
+        $domain = config('session.domain') ?: null;
+
+        if ($domain) {
+            $response->cookie($cookieName, '', -2628000, $path, $domain, false, true, false, 'lax');
+        }
+        $response->cookie($cookieName, '', -2628000, $path, null, false, true, false, 'lax');
+
+        return $response;
     }
 
     /**
@@ -325,37 +386,17 @@ class UserController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        // Check if user is authenticated first - return 401 if not
-        $user = $request->user();
-        
-        if (!$user) {
-            $response = response()->json([
-                'success' => false,
-                'message' => 'Not authenticated',
-            ], 401);
-            
-            return $this->expireSessionCookie($response);
-        }
-
         $result = User::refreshSession($request);
 
         if (!$result['success']) {
-            $response = response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 401);
-            
-            return $this->expireSessionCookie($response);
+            return response()->json($result, 401);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
+        return response()->json($result);
     }
 
     /**
-     * Verify email address
+     * Verify email
      *
      * @param Request $request
      * @param int $id
@@ -363,199 +404,130 @@ class UserController extends Controller
      */
     public function verifyEmail(Request $request, int $id): JsonResponse
     {
-        // Verify signed URL
+        $request->validate([
+            'hash' => 'required|string',
+            'signature' => 'required|string',
+        ]);
+
+        // Verify the signed URL
         if (!$request->hasValidSignature()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired verification link',
-            ], 403);
-        }
-
-        $hash = $request->input('hash');
-        
-        if (!$hash) {
-            return response()->json([
-                'success' => false,
                 'message' => 'Invalid verification link',
-            ], 422);
-        }
-
-        $result = User::verifyEmail($id, $hash);
-
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
             ], 400);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
+        $hash = $request->query('hash');
+        $result = User::verifyEmail($id, $hash);
+
+        if (!$result['success']) {
+            return response()->json($result, 400);
+        }
+
+        return response()->json($result);
     }
 
     /**
-     * Resend email verification
+     * Resend verification email
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function resendVerificationEmail(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $sessionCookie = User::getSessionCookie($request);
+        $xsrfToken = User::getXsrfToken($request);
 
-        if (!$user) {
+        if (!$sessionCookie) {
             return response()->json([
                 'success' => false,
                 'message' => 'Not authenticated',
             ], 401);
         }
 
-        $result = User::sendEmailVerification($user);
+        $result = User::forwardRzAuthRequest(
+            'POST',
+            '/api/resend-verification-email',
+            [],
+            [],
+            $sessionCookie,
+            $xsrfToken ?? ''
+        );
 
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 400);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
+        $statusCode = $result['status'] ?? ($result['success'] ? 200 : 401);
+        return response()->json($result['data'], $statusCode);
     }
 
     /**
-     * Request password reset (forgot password)
+     * Forgot password
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function forgotPassword(Request $request): JsonResponse
     {
-        $validated = User::validateForgotPassword($request->all());
-        $result = User::sendPasswordResetEmail($validated['email']);
+        try {
+            $data = User::validateForgotPassword($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
+        }
 
-        // Always return success message for security (don't reveal if email exists)
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
+        $result = User::sendPasswordResetEmail($data['email']);
+
+        return response()->json($result);
     }
 
     /**
-     * Reset password with token
+     * Reset password
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function resetPassword(Request $request): JsonResponse
     {
-        $validated = User::validateResetPassword($request->all());
+        try {
+            $data = User::validateResetPassword($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
+        }
+
         $result = User::resetPassword(
-            $validated['email'],
-            $validated['token'],
-            $validated['password']
+            $data['email'],
+            $data['token'],
+            $data['password']
         );
 
         if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 400);
+            return response()->json($result, 400);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
+        return response()->json($result);
     }
 
     /**
-     * Change password for authenticated user
+     * Change password
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function changePassword(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Not authenticated',
-            ], 401);
+        try {
+            $data = User::validateChangePassword($request->all());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
         }
 
-        $validated = User::validateChangePassword($request->all());
         $result = User::changePassword(
-            $user,
-            $validated['current_password'],
-            $validated['password']
+            $request,
+            $data['current_password'],
+            $data['password']
         );
 
-        if (!$result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 400);
+        if (isset($result['success']) && !$result['success']) {
+            return response()->json($result, 400);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-        ]);
-    }
-
-    /**
-     * Expire session cookie helper
-     *
-     * @param JsonResponse $response
-     * @return JsonResponse
-     */
-    private function expireSessionCookie(JsonResponse $response): JsonResponse
-    {
-        try {
-            $cookieName = config('session.cookie', 'laravel_session');
-            $path = config('session.path', '/');
-            $domain = config('session.domain') ?: null;
-            
-            // Expire cookie for configured domain
-            if ($domain) {
-                $cookie = cookie(
-                    $cookieName,
-                    '',
-                    -2628000,
-                    $path,
-                    $domain,
-                    (bool) config('session.secure'),
-                    (bool) config('session.http_only', true),
-                    false,
-                    config('session.same_site', 'lax') ?: 'lax'
-                );
-                $response = $response->withCookie($cookie);
-            }
-            
-            // Also expire for null domain (localhost)
-            $cookieNull = cookie(
-                $cookieName,
-                '',
-                -2628000,
-                $path,
-                null,
-                false,
-                (bool) config('session.http_only', true),
-                false,
-                config('session.same_site', 'lax') ?: 'lax'
-            );
-            $response = $response->withCookie($cookieNull);
-        } catch (\Exception $e) {
-            // Continue even if cookie expiration fails
-        }
-        
-        return $response;
+        return response()->json($result);
     }
 }

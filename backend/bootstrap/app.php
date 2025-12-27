@@ -21,9 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
         ]);
         
-        // Register permission middleware
+        // Register permission and RZ Auth middleware
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'rz.auth' => \App\Http\Middleware\RzAuthMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
