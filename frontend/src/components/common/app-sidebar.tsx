@@ -22,6 +22,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/stores/auth";
+import { usePermission } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -30,6 +31,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
   const { user } = useAuthStore();
   const { state } = useSidebar();
+  const hasHrisPermission = usePermission("hris.view");
   const isActivePath = (path: string) => pathname.startsWith(path);
   const isCollapsed = state === "collapsed";
 
@@ -40,12 +42,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: LayoutDashboard,
       isActive: isActivePath("/dashboard"),
     },
-    {
-      title: "HRIS",
-      url: "/hris",
-      icon: Building2,
-      isActive: isActivePath("/hris"),
-    },
+    ...(hasHrisPermission
+      ? [
+          {
+            title: "HRIS",
+            url: "/hris",
+            icon: Building2,
+            isActive: isActivePath("/hris"),
+          },
+        ]
+      : []),
     {
       title: "Finance",
       url: "/finance",

@@ -13,7 +13,7 @@ const API_CONFIG = {
     baseURL: "",
   },
   staging: {
-    baseURL: "https://rzerp-api.socia-dev.com",
+    baseURL: "https://rzerp-api.chys-dev.com",
   },
 } as const;
 
