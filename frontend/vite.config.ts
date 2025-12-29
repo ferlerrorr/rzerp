@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Toggle between local and staging
 // Set to true for local development, false for staging
-const USE_LOCAL = false;
+const USE_LOCAL = true;
 
 const API_TARGET = USE_LOCAL
   ? "http://localhost:8000"
@@ -46,6 +46,6 @@ export default defineConfig({
     },
   },
   preview: {
-    allowedHosts: ["rz-auth.chysev.cloud", "localhost", "127.0.0.1"],
+    allowedHosts: ["rz-erp.chysev.cloud", "localhost", "127.0.0.1"],
   },
 });
