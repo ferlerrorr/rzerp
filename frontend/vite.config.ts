@@ -11,7 +11,7 @@ const USE_LOCAL = false;
 
 const API_TARGET = USE_LOCAL
   ? "http://localhost:8000"
-  : "https://rzerp-api.socia-dev.com";
+  : "https://rz-auth.chysev.cloud";
 
 // Common proxy configuration
 const createProxyConfig = () => ({
@@ -46,6 +46,6 @@ export default defineConfig({
     },
   },
   preview: {
-    allowedHosts: ["rz-erp.socia-dev.com", "localhost", "127.0.0.1"],
+    allowedHosts: ["rz-auth.chysev.cloud", "localhost", "127.0.0.1"],
   },
 });

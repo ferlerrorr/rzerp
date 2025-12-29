@@ -13,7 +13,7 @@ const API_CONFIG = {
     baseURL: "",
   },
   staging: {
-    baseURL: "https://rzerp-api.chys-dev.com",
+    baseURL: "https://rz-auth.chysev.cloud",
   },
 } as const;
 
@@ -432,7 +432,10 @@ export async function createJournalEntry(data: Record<string, any>) {
  * Update a journal entry
  * PUT /api/journal-entries/{id}
  */
-export async function updateJournalEntry(id: number, data: Record<string, any>) {
+export async function updateJournalEntry(
+  id: number,
+  data: Record<string, any>
+) {
   const response = await api.put(`/api/journal-entries/${id}`, data);
   return response.data;
 }
