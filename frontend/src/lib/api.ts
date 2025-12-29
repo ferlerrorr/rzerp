@@ -13,7 +13,7 @@ const API_CONFIG = {
     baseURL: "",
   },
   staging: {
-    baseURL: "https://rz-auth.chysev.cloud",
+    baseURL: "https://rzerp-api.chysev.cloud",
   },
 } as const;
 
