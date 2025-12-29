@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import { Input } from "@/components/ui/input";
 
+import { redirectIfAuthenticated } from "@/lib/auth-guard";
 import { useAuthStore } from "@/stores/auth";
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -315,5 +316,8 @@ export function LoginPage() {
 }
 
 export const Route = createFileRoute("/auth/login")({
+  beforeLoad: async () => {
+    await redirectIfAuthenticated();
+  },
   component: LoginPage,
 });
