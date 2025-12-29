@@ -69,11 +69,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error: any) {
       // Handle 401 (session not found in database) or other errors
-      const isSessionNotFound =
-        error?.response?.status === 401 &&
-        (error?.response?.data?.message?.includes("Session not found") ||
-          error?.response?.data?.message?.includes("Not authenticated"));
-
       // If unauthorized, call logout to ensure proper cleanup
       if (error?.response?.status === 401) {
         // Call logout to clear state, cookies, and notify backend
