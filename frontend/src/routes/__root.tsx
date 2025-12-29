@@ -3,10 +3,11 @@ import { SiteHeader } from "@/components/navbar/site-header";
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { createRootRoute, Outlet, useLocation, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useMemo } from "react";
 import { Heading, Paragraph } from "@/components/semantic/index";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth";
 
 // Minimal pending screen shown while beforeLoad is resolving
 function PendingScreen() {
@@ -190,5 +191,51 @@ export const Route = createRootRoute({
   wrapInSuspense: true,
   pendingComponent: PendingScreen,
   pendingMs: 0,
+  beforeLoad: async ({ location }) => {
+    // Allow access to auth routes without authentication
+    const authRoutes = ["/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password"];
+    const isAuthRoute = authRoutes.some(route => location.pathname.startsWith(route));
+    
+    if (isAuthRoute) {
+      return;
+    }
+
+    // For all other routes, check authentication
+    const state = useAuthStore.getState();
+    const { user, fetchUser, loading, isAuthenticated } = state;
+
+    // If already authenticated, allow access
+    if (isAuthenticated && user) {
+      return;
+    }
+
+    // If we don't have a user and we're not loading, try to fetch it
+    if (!user && !loading) {
+      try {
+        await fetchUser();
+      } catch (error) {
+        // If fetchUser fails, user is not authenticated
+        // Continue to check below
+      }
+    }
+
+    // Wait for loading to complete if it's in progress (with timeout)
+    let currentState = useAuthStore.getState();
+    let waitCount = 0;
+    const maxWait = 50; // Max 2.5 seconds
+    while (currentState.loading && waitCount < maxWait) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      currentState = useAuthStore.getState();
+      waitCount++;
+    }
+
+    // If not authenticated, redirect to login
+    if (!currentState.isAuthenticated || !currentState.user) {
+      throw redirect({
+        to: "/auth/login",
+        replace: true,
+      });
+    }
+  },
   component: RootComponent,
 });

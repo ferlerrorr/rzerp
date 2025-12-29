@@ -69,21 +69,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error: any) {
       // Handle 401 (session not found in database) or other errors
-      // If unauthorized, call logout to ensure proper cleanup
+      // Just clear state - don't call logout here to avoid loops
+      // Logout should only be called explicitly by user action
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        isLoading: false,
+      });
+      useRbacStore.getState().setPermissions([]);
+      useRbacStore.getState().setRoles([]);
+
+      // Clear cookies on 401
       if (error?.response?.status === 401) {
-        // Call logout to clear state, cookies, and notify backend
-        // The logout function is idempotent, so it's safe to call even if already called
-        await useAuthStore.getState().logout();
-      } else {
-        // For other errors, just clear local state
-        set({
-          user: null,
-          isAuthenticated: false,
-          loading: false,
-          isLoading: false,
-        });
-        useRbacStore.getState().setPermissions([]);
-        useRbacStore.getState().setRoles([]);
+        deleteCookie("laravel-session", "/");
+        deleteCookie("laravel-session", "/", ".socia-dev.com");
+        deleteCookie("laravel-session", "/", "localhost");
+        deleteCookie("rzauth-session", "/");
+        deleteCookie("rzauth-session", "/", ".socia-dev.com");
+        deleteCookie("rzauth-session", "/", "localhost");
       }
     }
   },

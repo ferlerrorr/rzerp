@@ -4,24 +4,38 @@ import { redirect } from "@tanstack/react-router";
 
 export async function requireAuth() {
   const state = useAuthStore.getState();
-  const { user, fetchUser, loading } = state;
+  const { user, fetchUser, loading, isAuthenticated } = state;
+
+  // If already authenticated, allow access
+  if (isAuthenticated && user) {
+    return;
+  }
 
   // If we don't have a user and we're not loading, try to fetch it
   if (!user && !loading) {
-    await fetchUser();
+    try {
+      await fetchUser();
+    } catch (error) {
+      // If fetchUser fails, user is not authenticated
+      // Continue to check below
+    }
   }
 
-  // Wait for loading to complete if it's in progress
+  // Wait for loading to complete if it's in progress (with timeout)
   let currentState = useAuthStore.getState();
-  while (currentState.loading) {
+  let waitCount = 0;
+  const maxWait = 50; // Max 2.5 seconds
+  while (currentState.loading && waitCount < maxWait) {
     await new Promise((resolve) => setTimeout(resolve, 50));
     currentState = useAuthStore.getState();
+    waitCount++;
   }
 
   // Check authentication after loading completes
   if (!currentState.isAuthenticated || !currentState.user) {
     throw redirect({
       to: "/auth/login",
+      replace: true,
     });
   }
 }
