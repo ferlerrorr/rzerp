@@ -53,6 +53,8 @@ export const api = axios.create({
 
 // Track refresh promise to prevent concurrent refresh requests
 let refreshPromise: Promise<void> | null = null;
+// Track failed refresh attempts to prevent infinite loops
+let refreshFailed = false;
 
 /**
  * Attempt to refresh the session
@@ -60,6 +62,11 @@ let refreshPromise: Promise<void> | null = null;
  * Only refreshes if session exists in database (backend validates this)
  */
 async function attemptRefresh(): Promise<void> {
+  // If refresh already failed, don't try again
+  if (refreshFailed) {
+    throw new Error("Refresh already failed - session invalid");
+  }
+
   // If a refresh is already in progress, wait for it
   if (refreshPromise) {
     return refreshPromise;
@@ -69,11 +76,14 @@ async function attemptRefresh(): Promise<void> {
   refreshPromise = (async () => {
     try {
       const response = await api.post("/api/auth/refresh");
-      // If refresh succeeds, session exists in database and was refreshed
+      // If refresh succeeds, check if it actually validated the session
       if (response.data?.success) {
+        // Reset failed flag on success
+        refreshFailed = false;
         return;
       }
       // If refresh returns non-success, session doesn't exist - logout
+      refreshFailed = true;
       useAuthStore.getState().logout();
       throw new Error("Refresh failed - session not found in database");
     } catch (error) {
@@ -81,6 +91,7 @@ async function attemptRefresh(): Promise<void> {
       const axiosError = error as AxiosError;
       if (axiosError.response?.status === 401) {
         // Session doesn't exist in database - force logout to clear cookies
+        refreshFailed = true;
         useAuthStore.getState().logout();
       }
       throw error;
@@ -108,10 +119,16 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
+      _retryCount?: number;
     };
 
     if (!originalRequest) {
       return Promise.reject(error);
+    }
+
+    // Initialize retry count
+    if (originalRequest._retryCount === undefined) {
+      originalRequest._retryCount = 0;
     }
 
     // CSRF token mismatch (419)
@@ -126,19 +143,33 @@ api.interceptors.response.use(
     // Backend /user endpoint validates session exists in database before returning 401
     if (
       error.response?.status === 401 &&
-      !originalRequest._retry &&
+      originalRequest._retryCount < 1 && // Only retry once
       !isAuthEndpoint(originalRequest.url)
     ) {
       originalRequest._retry = true;
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+
       try {
         // Attempt to refresh - backend will check if session exists in database
         // If session doesn't exist, refresh will return 401 and logout will be called
         await attemptRefresh();
         // If refresh succeeded, session exists in database - retry original request
-        return api(originalRequest);
-      } catch {
+        try {
+          const retryResponse = await api(originalRequest);
+          return retryResponse;
+        } catch (retryError) {
+          // If retry still fails with 401, mark refresh as failed to prevent further attempts
+          const retryAxiosError = retryError as AxiosError;
+          if (retryAxiosError.response?.status === 401) {
+            refreshFailed = true;
+            useAuthStore.getState().logout();
+          }
+          return Promise.reject(retryError);
+        }
+      } catch (refreshError) {
         // Refresh failed - session doesn't exist in database
         // Logout already handled in attemptRefresh (clears cookies and state)
+        refreshFailed = true;
         return Promise.reject(error);
       }
     }

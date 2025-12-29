@@ -872,6 +872,28 @@ class User extends Authenticatable
      */
     public static function refreshSession(Request $request): array
     {
+        $sessionCookie = self::getSessionCookie($request);
+        $xsrfToken = self::getXsrfToken($request);
+        
+        // If no session cookie, can't refresh
+        if (!$sessionCookie) {
+            return [
+                'success' => false,
+                'message' => 'No session cookie found',
+            ];
+        }
+
+        // Validate session with RZ Auth (same as getCurrentUser)
+        $userResult = self::getCurrentUser($request);
+        
+        // If RZ Auth says session is invalid, refresh fails
+        if (!isset($userResult['success']) || !$userResult['success']) {
+            return [
+                'success' => false,
+                'message' => $userResult['message'] ?? 'Session invalid',
+            ];
+        }
+
         // Ensure session is started
         if (!$request->hasSession()) {
             $request->session()->start();
