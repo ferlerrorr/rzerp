@@ -10,7 +10,8 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\JournalEntryController;
 use App\Http\Controllers\Api\BudgetController;
-
+use App\Models\User;
+use Illuminate\Http\Request;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -24,8 +25,8 @@ use App\Http\Controllers\Api\BudgetController;
 Route::get('/health', [HealthController::class, 'index']);
 
 // CSRF cookie endpoint (proxies to RZ Auth)
-Route::get('/csrf-cookie', function (\Illuminate\Http\Request $request) {
-    $result = \App\Models\User::forwardRzAuthRequest('GET', '/csrf-cookie');
+Route::get('/csrf-cookie', function (Request $request) {
+    $result = User::forwardRzAuthRequest('GET', '/csrf-cookie');
     
     $statusCode = $result['status'] ?? ($result['success'] ? 200 : 500);
     $response = response()->json($result['data'] ?? ['success' => $result['success']], $statusCode);
