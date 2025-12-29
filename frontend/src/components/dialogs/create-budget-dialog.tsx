@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBudgetStore, BudgetFormData } from "@/stores/budget";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export interface CreateBudgetDialogProps {
   open: boolean;
@@ -34,24 +36,67 @@ export function CreateBudgetDialog({
   title = "Create Budget",
   onSubmit,
 }: CreateBudgetDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
-    useBudgetStore();
+  const {
+    formData,
+    errors,
+    updateField,
+    setIsOpen,
+    validateForm,
+    resetForm,
+    createBudget,
+    loading,
+  } = useBudgetStore();
+
+  const [otherCategory, setOtherCategory] = useState("");
 
   // Sync dialog open state with store
   useEffect(() => {
     setIsOpen(open);
+    if (!open) {
+      setOtherCategory("");
+    }
   }, [open, setIsOpen]);
 
   const handleChange = (field: keyof BudgetFormData, value: string) => {
     updateField(field, value);
+    // Clear other category when selecting a different category
+    if (field === "category" && value !== "Other") {
+      setOtherCategory("");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If "Other" is selected, use the custom category input
+    const finalCategory = formData.category === "Other" 
+      ? otherCategory.trim() 
+      : formData.category;
+    
+    // Validate other category if "Other" is selected
+    if (formData.category === "Other" && !otherCategory.trim()) {
+      toast.error("Please enter a custom category name");
+      return;
+    }
+    
+    // Create a modified form data with the final category
+    const submitData = {
+      ...formData,
+      category: finalCategory,
+    };
+    
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createBudget(submitData);
+      if (result) {
+        toast.success("Budget created successfully");
+        onSubmit?.(submitData);
+        onOpenChange(false);
+        resetForm();
+        setOtherCategory("");
+      } else {
+        // Error is already handled in the store
+        toast.error("Failed to create budget");
+      }
     }
   };
 
@@ -147,6 +192,22 @@ export function CreateBudgetDialog({
               {errors.category && (
                 <p className="text-xs text-destructive">{errors.category}</p>
               )}
+              
+              {/* Other Category Input - Show when "Other" is selected */}
+              {formData.category === "Other" && (
+                <div className="mt-2">
+                  <Label htmlFor="otherCategory" className="text-sm">
+                    Custom Category Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="otherCategory"
+                    value={otherCategory}
+                    onChange={(e) => setOtherCategory(e.target.value)}
+                    placeholder="Enter custom category name"
+                    className="mt-1"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Budgeted Amount */}
@@ -193,11 +254,17 @@ export function CreateBudgetDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto order-2 sm:order-1"
+            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit} variant="default">
-            Create Budget
+          <Button
+            type="submit"
+            onClick={handleSubmit}
+            variant="default"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Budget"}
           </Button>
         </DialogFooter>
       </DialogContent>

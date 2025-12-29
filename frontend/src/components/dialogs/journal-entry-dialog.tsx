@@ -24,6 +24,7 @@ import {
   useJournalEntryStore,
   JournalEntryFormData,
 } from "@/stores/journalEntry";
+import { toast } from "sonner";
 
 export interface Account {
   id: string;
@@ -47,8 +48,16 @@ export function JournalEntryDialog({
   onSubmit,
   accounts = [],
 }: JournalEntryDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
-    useJournalEntryStore();
+  const {
+    formData,
+    errors,
+    updateField,
+    setIsOpen,
+    validateForm,
+    resetForm,
+    createJournalEntry,
+    loading,
+  } = useJournalEntryStore();
 
   // Sync dialog open state with store
   useEffect(() => {
@@ -59,12 +68,19 @@ export function JournalEntryDialog({
     updateField(field, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createJournalEntry(formData);
+      if (result) {
+        toast.success("Journal entry created successfully");
+        onSubmit?.(formData);
+        onOpenChange(false);
+        resetForm();
+      } else {
+        // Error is already handled in the store
+        toast.error("Failed to create journal entry");
+      }
     }
   };
 
@@ -293,11 +309,17 @@ export function JournalEntryDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto order-2 sm:order-1"
+            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit} variant="default">
-            Create Entry
+          <Button
+            type="submit"
+            onClick={handleSubmit}
+            variant="default"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Entry"}
           </Button>
         </DialogFooter>
       </DialogContent>

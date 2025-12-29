@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Employee;
-use Illuminate\Support\Facades\DB;
 
 class EmployeeService
 {
@@ -86,8 +85,6 @@ class EmployeeService
     public function createEmployee(array $data): array
     {
         try {
-            DB::beginTransaction();
-
             $employee = Employee::create([
                 'first_name' => $data['first_name'],
                 'middle_name' => $data['middle_name'] ?? null,
@@ -115,14 +112,11 @@ class EmployeeService
                 'emergency_contact_relationship' => $data['emergency_contact_relationship'],
             ]);
 
-            DB::commit();
-
             return [
                 'success' => true,
                 'employee' => $this->formatEmployee($employee),
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to create employee: ' . $e->getMessage(),
@@ -150,8 +144,6 @@ class EmployeeService
         }
 
         try {
-            DB::beginTransaction();
-
             $updateData = [
                 'first_name' => $data['first_name'],
                 'middle_name' => $data['middle_name'] ?? null,
@@ -181,14 +173,11 @@ class EmployeeService
 
             $employee->update($updateData);
 
-            DB::commit();
-
             return [
                 'success' => true,
                 'employee' => $this->formatEmployee($employee),
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to update employee: ' . $e->getMessage(),

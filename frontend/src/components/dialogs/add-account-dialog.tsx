@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAccountStore, AccountFormData, AccountType } from "@/stores/account";
+import { toast } from "sonner";
 
 export interface AddAccountDialogProps {
   open: boolean;
@@ -40,6 +41,8 @@ export function AddAccountDialog({
     setIsOpen,
     validateForm,
     resetForm,
+    createAccount,
+    loading,
   } = useAccountStore();
 
   // Sync dialog open state with store
@@ -51,12 +54,19 @@ export function AddAccountDialog({
     updateField(field, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createAccount(formData);
+      if (result) {
+        toast.success("Account created successfully");
+        onSubmit?.(formData);
+        onOpenChange(false);
+        resetForm();
+      } else {
+        // Error is already handled in the store
+        toast.error("Failed to create account");
+      }
     }
   };
 
@@ -191,11 +201,17 @@ export function AddAccountDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto order-2 sm:order-1"
+            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit} variant="default">
-            Add Account
+          <Button
+            type="submit"
+            onClick={handleSubmit}
+            variant="default"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Add Account"}
           </Button>
         </DialogFooter>
       </DialogContent>

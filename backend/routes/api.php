@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\PositionController;
+use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\JournalEntryController;
+use App\Http\Controllers\Api\BudgetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -143,6 +146,34 @@ Route::middleware('rz.auth')->group(function () {
         Route::get('/{id}', [PositionController::class, 'show'])->middleware('permission:hris.view');
         Route::put('/{id}', [PositionController::class, 'update'])->middleware('permission:hris.update');
         Route::delete('/{id}', [PositionController::class, 'destroy'])->middleware('permission:hris.delete');
+    });
+
+    // Account management routes with permission checks
+    Route::prefix('accounts')->group(function () {
+        Route::get('/', [AccountController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [AccountController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [AccountController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [AccountController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [AccountController::class, 'destroy'])->middleware('permission:finance.delete');
+    });
+
+    // Journal Entry management routes with permission checks
+    Route::prefix('journal-entries')->group(function () {
+        Route::get('/', [JournalEntryController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [JournalEntryController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [JournalEntryController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [JournalEntryController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [JournalEntryController::class, 'destroy'])->middleware('permission:finance.delete');
+        Route::post('/{id}/post', [JournalEntryController::class, 'post'])->middleware('permission:finance.update');
+    });
+
+    // Budget management routes with permission checks
+    Route::prefix('budgets')->group(function () {
+        Route::get('/', [BudgetController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [BudgetController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [BudgetController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [BudgetController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [BudgetController::class, 'destroy'])->middleware('permission:finance.delete');
     });
     
     // Add your other protected routes here

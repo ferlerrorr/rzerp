@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef } from "@/components/table/appTable";
 import { AddAccountDialog } from "@/components/dialogs/add-account-dialog";
-import { AccountFormData, AccountType } from "@/stores/account";
+import { AccountType, useAccountStore, AccountFromAPI } from "@/stores/account";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
   FileText,
@@ -56,46 +57,46 @@ const generalLedgerCardConfig: GeneralLedgerCardConfig[] = [
   {
     title: "Assets",
     dataKey: "assets",
-    countColor: "blue",
+    countColor: "default",
     bgColor: "bg-white",
     icon: Building2,
-    iconBgColor: "blue",
+    iconBgColor: "gray",
   },
   {
     title: "Liabilities",
     dataKey: "liabilities",
-    countColor: "orange",
+    countColor: "default",
     bgColor: "bg-white",
     icon: FileText,
-    iconBgColor: "orange",
+    iconBgColor: "gray",
   },
   {
     title: "Equity",
     dataKey: "equity",
-    countColor: "purple",
+    countColor: "default",
     bgColor: "bg-white",
     icon: TrendingUp,
-    iconBgColor: "purple",
+    iconBgColor: "gray",
   },
   {
     title: "Revenue",
     dataKey: "revenue",
-    countColor: "green",
+    countColor: "default",
     bgColor: "bg-white",
     icon: DollarSign,
-    iconBgColor: "green",
+    iconBgColor: "gray",
   },
   {
     title: "Expenses",
     dataKey: "expenses",
-    countColor: "red",
+    countColor: "default",
     bgColor: "bg-white",
     icon: ArrowDownLeft,
-    iconBgColor: "red",
+    iconBgColor: "gray",
   },
 ];
 
-// Unified Account interface
+// Unified Account interface for display
 interface Account {
   id: string;
   accountType: AccountType;
@@ -106,160 +107,8 @@ interface Account {
   balance: string;
 }
 
-// Default account data
-const defaultAssetAccounts: Account[] = [
-  {
-    id: "1",
-    accountType: "Asset",
-    code: "1001",
-    accountName: "Cash and Cash Equivalents",
-    debit: "₱500,000",
-    credit: "₱0",
-    balance: "₱500,000",
-  },
-  {
-    id: "2",
-    accountType: "Asset",
-    code: "1002",
-    accountName: "Accounts Receivable",
-    debit: "₱250,000",
-    credit: "₱0",
-    balance: "₱250,000",
-  },
-  {
-    id: "3",
-    accountType: "Asset",
-    code: "1003",
-    accountName: "Inventory",
-    debit: "₱800,000",
-    credit: "₱0",
-    balance: "₱800,000",
-  },
-  {
-    id: "4",
-    accountType: "Asset",
-    code: "1004",
-    accountName: "Property, Plant & Equipment",
-    debit: "₱630,000",
-    credit: "₱0",
-    balance: "₱630,000",
-  },
-];
-
-const defaultLiabilityAccounts: Account[] = [
-  {
-    id: "1",
-    accountType: "Liability",
-    code: "2001",
-    accountName: "Accounts Payable",
-    debit: "₱200,000",
-    credit: "₱950,000",
-    balance: "₱750,000",
-  },
-];
-
-const defaultEquityAccounts: Account[] = [
-  {
-    id: "1",
-    accountType: "Equity",
-    code: "3001",
-    accountName: "Capital",
-    debit: "₱0",
-    credit: "₱1,000,000",
-    balance: "₱1,000,000",
-  },
-];
-
-const defaultRevenueAccounts: Account[] = [
-  {
-    id: "1",
-    accountType: "Revenue",
-    code: "4001",
-    accountName: "Sales Revenue",
-    debit: "₱0",
-    credit: "₱2,800,000",
-    balance: "₱2,800,000",
-  },
-];
-
-const defaultExpenseAccounts: Account[] = [
-  {
-    id: "1",
-    accountType: "Expense",
-    code: "5001",
-    accountName: "Cost of Goods Sold",
-    debit: "₱980,000",
-    credit: "₱0",
-    balance: "₱980,000",
-  },
-  {
-    id: "2",
-    accountType: "Expense",
-    code: "5002",
-    accountName: "Operating Expenses",
-    debit: "₱662,850",
-    credit: "₱0",
-    balance: "₱662,850",
-  },
-];
-
-const defaultAccounts: Account[] = [
-  ...defaultAssetAccounts,
-  ...defaultLiabilityAccounts,
-  ...defaultEquityAccounts,
-  ...defaultRevenueAccounts,
-  ...defaultExpenseAccounts,
-];
-
-// LocalStorage key
-const ACCOUNTS_STORAGE_KEY = "rzerp_accounts";
-const ACCOUNT_COUNTER_KEY = "rzerp_account_counter";
-
-// Helper functions for localStorage
-const loadAccountsFromStorage = (): Account[] => {
-  try {
-    const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Initialize with default accounts if no data exists
-    saveAccountsToStorage(defaultAccounts);
-    // Initialize counter
-    if (!localStorage.getItem(ACCOUNT_COUNTER_KEY)) {
-      localStorage.setItem(ACCOUNT_COUNTER_KEY, "7");
-    }
-    return defaultAccounts;
-  } catch (error) {
-    console.error("Error loading accounts from localStorage:", error);
-    return defaultAccounts;
-  }
-};
-
-const saveAccountsToStorage = (accounts: Account[]) => {
-  try {
-    localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
-  } catch (error) {
-    console.error("Error saving accounts to localStorage:", error);
-  }
-};
-
-const getNextAccountId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(ACCOUNT_COUNTER_KEY) || "7",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(ACCOUNT_COUNTER_KEY, nextCounter.toString());
-    return nextCounter.toString();
-  } catch (error) {
-    console.error("Error getting next account ID:", error);
-    return Date.now().toString();
-  }
-};
-
-// Transform AccountFormData to Account
-const transformFormDataToAccount = (formData: AccountFormData): Account => {
+// Transform API account to display account
+const transformApiAccountToAccount = (apiAccount: AccountFromAPI): Account => {
   const formatCurrency = (amount: number) => {
     return `₱${amount.toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -267,23 +116,24 @@ const transformFormDataToAccount = (formData: AccountFormData): Account => {
     })}`;
   };
 
-  const debit = parseFloat(formData.debit) || 0;
-  const credit = parseFloat(formData.credit) || 0;
+  const debit = parseFloat(apiAccount.debit) || 0;
+  const credit = parseFloat(apiAccount.credit) || 0;
+  
   // Balance calculation depends on account type
   // Assets/Expenses: Debit - Credit (positive balance)
   // Liabilities/Equity/Revenue: Credit - Debit (positive balance)
   let balance = 0;
-  if (formData.accountType === "Asset" || formData.accountType === "Expense") {
+  if (apiAccount.account_type === "Asset" || apiAccount.account_type === "Expense") {
     balance = debit - credit;
   } else {
     balance = credit - debit;
   }
 
   return {
-    id: getNextAccountId(),
-    accountType: formData.accountType,
-    code: formData.code.trim(),
-    accountName: formData.accountName.trim(),
+    id: apiAccount.id.toString(),
+    accountType: apiAccount.account_type,
+    code: apiAccount.code,
+    accountName: apiAccount.account_name,
     debit: formatCurrency(debit),
     credit: formatCurrency(credit),
     balance: formatCurrency(Math.abs(balance)),
@@ -316,6 +166,70 @@ const accountColumns: ColumnDef<Account>[] = [
     className: "font-semibold",
   },
 ];
+
+// Skeleton Components
+const CardSkeleton = () => (
+  <div className="w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2">
+    <div className="flex flex-row items-center justify-between">
+      <Skeleton className="h-4 w-16" />
+      <Skeleton className="h-11 w-11 rounded-full" />
+    </div>
+    <Skeleton className="h-8 w-20" />
+  </div>
+);
+
+const TableSkeleton = () => (
+  <div className="w-full border border-gray-200 rounded-3xl p-4">
+    <Skeleton className="h-6 w-32 mb-4" />
+    <div className="space-y-4 pb-2">
+      <div className="w-full -mx-2 sm:mx-0">
+        <div
+          className="overflow-x-auto px-2 sm:px-0 scrollbar-thin"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="sm:min-w-0" style={{ minWidth: "min(100%, 800px)" }}>
+            <div style={{ minWidth: "800px" }}>
+              <div className="w-full border border-[#EFEFEF] rounded-2xl overflow-hidden bg-white">
+                {/* Table Header */}
+                <div className="bg-[#F4F4F5] border-b border-[#EFEFEF] rounded-t-2xl">
+                  <div className="flex h-12">
+                    <Skeleton className="h-6 w-20 m-3" />
+                    <Skeleton className="h-6 w-32 m-3" />
+                    <Skeleton className="h-6 w-24 m-3" />
+                    <Skeleton className="h-6 w-24 m-3" />
+                    <Skeleton className="h-6 w-24 m-3" />
+                  </div>
+                </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-[#EFEFEF]">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex h-16 items-center">
+                      <Skeleton className="h-4 w-20 mx-4" />
+                      <Skeleton className="h-4 w-32 mx-4" />
+                      <Skeleton className="h-4 w-24 mx-4" />
+                      <Skeleton className="h-4 w-24 mx-4" />
+                      <Skeleton className="h-4 w-24 mx-4" />
+                    </div>
+                  ))}
+                </div>
+                {/* Table Footer */}
+                <div className="bg-[#F4F4F5] border-t border-[#EFEFEF] rounded-b-2xl">
+                  <div className="flex h-16 items-center">
+                    <Skeleton className="h-4 w-20 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-24 mx-4" />
+                    <Skeleton className="h-4 w-24 mx-4" />
+                    <Skeleton className="h-4 w-24 mx-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // Helper function to calculate totals for footer
 const calculateTotals = (accounts: Account[]) => {
@@ -351,12 +265,26 @@ const calculateTotals = (accounts: Account[]) => {
 };
 
 export function GeneralLedgerTab() {
-  // Load accounts from localStorage on mount
-  const [accounts, setAccounts] = useState<Account[]>(() =>
-    loadAccountsFromStorage()
-  );
+  const {
+    accounts: apiAccounts,
+    loading,
+    error,
+    fetchAccounts,
+  } = useAccountStore();
 
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+
+  // Fetch accounts on mount - set high per_page to get all accounts
+  useEffect(() => {
+    const { setFilters } = useAccountStore.getState();
+    setFilters({ per_page: 1000 }); // Get all accounts
+    fetchAccounts();
+  }, [fetchAccounts]);
+
+  // Transform API accounts to display format
+  const accounts = useMemo(() => {
+    return apiAccounts.map(transformApiAccountToAccount);
+  }, [apiAccounts]);
 
   // Filter accounts by type
   const assetAccounts = useMemo(
@@ -419,38 +347,22 @@ export function GeneralLedgerTab() {
     [expenseAccounts]
   );
 
-  // Handle account submission
-  const handleAccountSubmit = (data: AccountFormData) => {
-    try {
-      // Transform form data to account format
-      const newAccount = transformFormDataToAccount(data);
+  // Handle account submission - refresh from API after creation
+  const handleAccountSubmit = async (_data?: unknown) => {
+    // The dialog already handles the API call via the store
+    // Just refresh the accounts list to get the new account
+    await fetchAccounts();
+  };
 
-      // Add new account to the list
-      const updatedAccounts = [newAccount, ...accounts];
-
-      // Save to localStorage
-      saveAccountsToStorage(updatedAccounts);
-
-      // Update state to trigger re-render
-      setAccounts(updatedAccounts);
-
-      // Show success toast
-      toast.success("Account Added Successfully", {
-        description: `${data.accountName} has been added to ${data.accountType} accounts.`,
-        duration: 3000,
-      });
-
-      console.log("Account added successfully:", newAccount);
-    } catch (error) {
-      console.error("Error adding account:", error);
-      // Show error toast
-      toast.error("Failed to Add Account", {
-        description:
-          "An error occurred while adding the account. Please try again.",
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to Load Accounts", {
+        description: error,
         duration: 4000,
       });
     }
-  };
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
@@ -468,124 +380,195 @@ export function GeneralLedgerTab() {
           onAddAccountClick={() => setIsAddAccountOpen(true)}
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {generalLedgerCardConfig.map((card) => (
-          <SimpleCard
-            key={card.dataKey}
-            title={card.title}
-            count={generalLedgerCounts[card.dataKey]}
-            countColor={card.countColor}
-            icon={card.icon}
-            iconBgColor={card.iconBgColor}
-            className={card.bgColor}
-          />
-        ))}
-      </div>
-      <div className="w-full border border-gray-200 rounded-3xl p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Asset Accounts
-        </h2>
-        <AppTable
-          data={assetAccounts}
-          columns={accountColumns}
-          itemsPerPage={5}
-          minWidth="800px"
-          getRowId={(row) => row.id}
-          footer={{
-            cells: [
-              "",
-              "Total Asset",
-              assetTotals.debit,
-              assetTotals.credit,
-              assetTotals.balance,
-            ],
-          }}
-        />
-      </div>
-      <div className="w-full border border-gray-200 rounded-3xl p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Liability Accounts
-        </h2>
-        <AppTable
-          data={liabilityAccounts}
-          columns={accountColumns}
-          itemsPerPage={5}
-          minWidth="800px"
-          getRowId={(row) => row.id}
-          footer={{
-            cells: [
-              "",
-              "Total Liability",
-              liabilityTotals.debit,
-              liabilityTotals.credit,
-              liabilityTotals.balance,
-            ],
-          }}
-        />
-      </div>
-      <div className="w-full border border-gray-200 rounded-3xl p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Equity Accounts
-        </h2>
-        <AppTable
-          data={equityAccounts}
-          columns={accountColumns}
-          itemsPerPage={5}
-          minWidth="800px"
-          getRowId={(row) => row.id}
-          footer={{
-            cells: [
-              "",
-              "Total Equity",
-              equityTotals.debit,
-              equityTotals.credit,
-              equityTotals.balance,
-            ],
-          }}
-        />
-      </div>
-      <div className="w-full border border-gray-200 rounded-3xl p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Revenue Accounts
-        </h2>
-        <AppTable
-          data={revenueAccounts}
-          columns={accountColumns}
-          itemsPerPage={5}
-          minWidth="800px"
-          getRowId={(row) => row.id}
-          footer={{
-            cells: [
-              "",
-              "Total Revenue",
-              revenueTotals.debit,
-              revenueTotals.credit,
-              revenueTotals.balance,
-            ],
-          }}
-        />
-      </div>
-      <div className="w-full border border-gray-200 rounded-3xl p-4">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Expense Accounts
-        </h2>
-        <AppTable
-          data={expenseAccounts}
-          columns={accountColumns}
-          itemsPerPage={5}
-          minWidth="800px"
-          getRowId={(row) => row.id}
-          footer={{
-            cells: [
-              "",
-              "Total Expense",
-              expenseTotals.debit,
-              expenseTotals.credit,
-              expenseTotals.balance,
-            ],
-          }}
-        />
-      </div>
+      
+      {loading && accounts.length === 0 ? (
+        <>
+          {/* Skeleton Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {[...Array(5)].map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+          
+          {/* Skeleton Tables */}
+          <TableSkeleton />
+          <TableSkeleton />
+          <TableSkeleton />
+          <TableSkeleton />
+          <TableSkeleton />
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {generalLedgerCardConfig.map((card) => (
+              <SimpleCard
+                key={card.dataKey}
+                title={card.title}
+                count={generalLedgerCounts[card.dataKey]}
+                countColor={card.countColor}
+                icon={card.icon}
+                iconBgColor={card.iconBgColor}
+                className={card.bgColor}
+              />
+            ))}
+          </div>
+          
+          <div className="w-full border border-gray-200 rounded-3xl p-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">
+              Asset Accounts
+            </h2>
+            <AppTable
+              data={assetAccounts}
+              columns={accountColumns}
+              itemsPerPage={5}
+              minWidth="800px"
+              getRowId={(row) => row.id}
+              footer={
+                assetAccounts.length > 0
+                  ? {
+                      cells: [
+                        "",
+                        "Total Asset",
+                        assetTotals.debit,
+                        assetTotals.credit,
+                        assetTotals.balance,
+                      ],
+                    }
+                  : undefined
+              }
+            />
+            {assetAccounts.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No accounts</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="w-full border border-gray-200 rounded-3xl p-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">
+              Liability Accounts
+            </h2>
+            <AppTable
+              data={liabilityAccounts}
+              columns={accountColumns}
+              itemsPerPage={5}
+              minWidth="800px"
+              getRowId={(row) => row.id}
+              footer={
+                liabilityAccounts.length > 0
+                  ? {
+                      cells: [
+                        "",
+                        "Total Liability",
+                        liabilityTotals.debit,
+                        liabilityTotals.credit,
+                        liabilityTotals.balance,
+                      ],
+                    }
+                  : undefined
+              }
+            />
+            {liabilityAccounts.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No accounts</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="w-full border border-gray-200 rounded-3xl p-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">
+              Equity Accounts
+            </h2>
+            <AppTable
+              data={equityAccounts}
+              columns={accountColumns}
+              itemsPerPage={5}
+              minWidth="800px"
+              getRowId={(row) => row.id}
+              footer={
+                equityAccounts.length > 0
+                  ? {
+                      cells: [
+                        "",
+                        "Total Equity",
+                        equityTotals.debit,
+                        equityTotals.credit,
+                        equityTotals.balance,
+                      ],
+                    }
+                  : undefined
+              }
+            />
+            {equityAccounts.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No accounts</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="w-full border border-gray-200 rounded-3xl p-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">
+              Revenue Accounts
+            </h2>
+            <AppTable
+              data={revenueAccounts}
+              columns={accountColumns}
+              itemsPerPage={5}
+              minWidth="800px"
+              getRowId={(row) => row.id}
+              footer={
+                revenueAccounts.length > 0
+                  ? {
+                      cells: [
+                        "",
+                        "Total Revenue",
+                        revenueTotals.debit,
+                        revenueTotals.credit,
+                        revenueTotals.balance,
+                      ],
+                    }
+                  : undefined
+              }
+            />
+            {revenueAccounts.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No accounts</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="w-full border border-gray-200 rounded-3xl p-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">
+              Expense Accounts
+            </h2>
+            <AppTable
+              data={expenseAccounts}
+              columns={accountColumns}
+              itemsPerPage={5}
+              minWidth="800px"
+              getRowId={(row) => row.id}
+              footer={
+                expenseAccounts.length > 0
+                  ? {
+                      cells: [
+                        "",
+                        "Total Expense",
+                        expenseTotals.debit,
+                        expenseTotals.credit,
+                        expenseTotals.balance,
+                      ],
+                    }
+                  : undefined
+              }
+            />
+            {expenseAccounts.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No accounts</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Add Account Dialog */}
       <AddAccountDialog

@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Position;
-use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
 
 class PositionService
 {
@@ -76,22 +76,17 @@ class PositionService
     public function createPosition(array $data): array
     {
         try {
-            DB::beginTransaction();
-
             $position = Position::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'department_id' => $data['department_id'] ?? null,
             ]);
 
-            DB::commit();
-
             return [
                 'success' => true,
                 'position' => $position->load('department'),
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to create position: ' . $e->getMessage(),
@@ -119,22 +114,17 @@ class PositionService
         }
 
         try {
-            DB::beginTransaction();
-
             $position->update([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'department_id' => $data['department_id'] ?? null,
             ]);
 
-            DB::commit();
-
             return [
                 'success' => true,
                 'position' => $position->fresh()->load('department'),
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to update position: ' . $e->getMessage(),
@@ -161,10 +151,8 @@ class PositionService
         }
 
         try {
-            // Check if position has employees
-            $employeeCount = DB::table('employees')
-                ->where('position', $position->name)
-                ->count();
+            // Check if position has employees using Eloquent
+            $employeeCount = Employee::where('position', $position->name)->count();
 
             if ($employeeCount > 0) {
                 return [
@@ -174,16 +162,13 @@ class PositionService
                 ];
             }
 
-            DB::beginTransaction();
             $position->delete();
-            DB::commit();
 
             return [
                 'success' => true,
                 'message' => 'Position deleted successfully',
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to delete position: ' . $e->getMessage(),

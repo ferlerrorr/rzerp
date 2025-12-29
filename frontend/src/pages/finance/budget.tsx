@@ -1,10 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreateBudgetDialog } from "@/components/dialogs/create-budget-dialog";
-import { BudgetFormData } from "@/stores/budget";
+import {
+  useBudgetStore,
+  BudgetFromAPI,
+} from "@/stores/budget";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +45,7 @@ interface BudgetCardConfig {
   subtitle: string;
 }
 
-// Budget Category interface
+// Budget Category interface for display
 interface BudgetCategory {
   id: string;
   title: string;
@@ -52,118 +56,33 @@ interface BudgetCategory {
   description?: string;
 }
 
-// Default budget categories
-const defaultBudgetCategories: BudgetCategory[] = [
-  {
-    id: "1",
-    title: "Salaries & Wages",
-    actualSpending: 524350,
-    budgetedAmount: 1500000,
-    usedColor: "green",
-    period: "2024",
-  },
-  {
-    id: "2",
-    title: "Operating Expenses",
-    actualSpending: 138500,
-    budgetedAmount: 800000,
-    usedColor: "green",
-    period: "2024",
-  },
-  {
-    id: "3",
-    title: "Marketing",
-    actualSpending: 280000,
-    budgetedAmount: 500000,
-    usedColor: "green",
-    period: "2024",
-  },
-  {
-    id: "4",
-    title: "IT & Technology",
-    actualSpending: 350000,
-    budgetedAmount: 400000,
-    usedColor: "orange",
-    period: "2024",
-  },
-  {
-    id: "5",
-    title: "Rent & Utilities",
-    actualSpending: 350000,
-    budgetedAmount: 300000,
-    usedColor: "red",
-    period: "2024",
-  },
-];
-
-// LocalStorage keys
-const BUDGET_CATEGORIES_STORAGE_KEY = "rzerp_budget_categories";
-const BUDGET_COUNTER_KEY = "rzerp_budget_counter";
-
-// Helper functions for localStorage
-const loadBudgetCategoriesFromStorage = (): BudgetCategory[] => {
-  try {
-    const stored = localStorage.getItem(BUDGET_CATEGORIES_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Initialize with default categories if no data exists
-    saveBudgetCategoriesToStorage(defaultBudgetCategories);
-    // Initialize counter
-    if (!localStorage.getItem(BUDGET_COUNTER_KEY)) {
-      localStorage.setItem(BUDGET_COUNTER_KEY, "5");
-    }
-    return defaultBudgetCategories;
-  } catch (error) {
-    console.error("Error loading budget categories from localStorage:", error);
-    return defaultBudgetCategories;
-  }
-};
-
-const saveBudgetCategoriesToStorage = (categories: BudgetCategory[]) => {
-  try {
-    localStorage.setItem(
-      BUDGET_CATEGORIES_STORAGE_KEY,
-      JSON.stringify(categories)
-    );
-  } catch (error) {
-    console.error("Error saving budget categories to localStorage:", error);
-  }
-};
-
-const getNextBudgetId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(BUDGET_COUNTER_KEY) || "5",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(BUDGET_COUNTER_KEY, nextCounter.toString());
-    return nextCounter.toString();
-  } catch (error) {
-    console.error("Error getting next budget ID:", error);
-    return Date.now().toString();
-  }
-};
-
-// Transform BudgetFormData to BudgetCategory
-const transformFormDataToBudgetCategory = (
-  formData: BudgetFormData
+// Transform API budget to display format
+const transformApiBudgetToBudgetCategory = (
+  apiBudget: BudgetFromAPI
 ): BudgetCategory => {
-  const budgetedAmount = parseFloat(formData.budgetedAmount) || 0;
-  const actualSpending = 0; // New budgets start with 0 actual spending
-
-  // Determine color based on percentage (will be green initially since spending is 0)
-  const usedColor: "green" | "orange" | "red" = "green";
+  const budgetedAmount = parseFloat(apiBudget.budgeted_amount) || 0;
+  const actualSpending = parseFloat(apiBudget.actual_spending) || 0;
+  
+  // Determine color based on percentage
+  const percentage = budgetedAmount > 0 
+    ? (actualSpending / budgetedAmount) * 100 
+    : 0;
+  
+  let usedColor: "green" | "orange" | "red" = "green";
+  if (percentage >= 100) {
+    usedColor = "red";
+  } else if (percentage >= 80) {
+    usedColor = "orange";
+  }
 
   return {
-    id: getNextBudgetId(),
-    title: formData.category.trim(),
+    id: apiBudget.id.toString(),
+    title: apiBudget.category,
     actualSpending,
     budgetedAmount,
     usedColor,
-    period: formData.period.trim(),
-    description: formData.description.trim() || undefined,
+    period: apiBudget.period,
+    description: apiBudget.description || undefined,
   };
 };
 
@@ -196,6 +115,17 @@ const budgetCardConfig: BudgetCardConfig[] = [
     subtitle: "53% remaining",
   },
 ];
+
+// Skeleton Components
+const CardSkeleton = () => (
+  <div className="w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2">
+    <div className="flex flex-row items-center justify-between">
+      <Skeleton className="h-4 w-16" />
+      <Skeleton className="h-11 w-11 rounded-full" />
+    </div>
+    <Skeleton className="h-8 w-20" />
+  </div>
+);
 
 function formatCurrency(amount: number): string {
   return `₱${amount.toLocaleString("en-US")}`;
@@ -265,12 +195,27 @@ function BudgetCategoryItem({
 }
 
 export function BudgetTab() {
-  // Load budget categories from localStorage on mount
-  const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
-    () => loadBudgetCategoriesFromStorage()
-  );
+  const {
+    budgets: apiBudgets,
+    loading,
+    error,
+    fetchBudgets,
+  } = useBudgetStore();
 
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
+
+  // Fetch budgets on mount
+  useEffect(() => {
+    // Set high per_page to get all budgets
+    const { setFilters } = useBudgetStore.getState();
+    setFilters({ per_page: 1000 });
+    fetchBudgets();
+  }, [fetchBudgets]);
+
+  // Transform API budgets to display format
+  const budgetCategories = useMemo(() => {
+    return apiBudgets.map(transformApiBudgetToBudgetCategory);
+  }, [apiBudgets]);
 
   // Calculate budget counts dynamically
   const budgetCounts = useMemo(() => {
@@ -283,6 +228,15 @@ export function BudgetTab() {
       0
     );
     const remaining = Math.max(0, totalBudget - actualSpending);
+
+    // If no budgets, return "0" instead of formatted currency
+    if (budgetCategories.length === 0) {
+      return {
+        totalBudget: "0",
+        actualSpending: "0",
+        remaining: "0",
+      };
+    }
 
     const formatCurrency = (amount: number): string => {
       return `₱${amount.toLocaleString("en-US", {
@@ -300,6 +254,19 @@ export function BudgetTab() {
 
   // Calculate subtitle percentages
   const budgetCardConfigWithSubtitle = useMemo(() => {
+    // If no budgets, return subtitles with "0"
+    if (budgetCategories.length === 0) {
+      return budgetCardConfig.map((config) => {
+        if (config.dataKey === "totalBudget") {
+          return { ...config, subtitle: "Annual budget" };
+        } else if (config.dataKey === "actualSpending") {
+          return { ...config, subtitle: "0% of budget" };
+        } else {
+          return { ...config, subtitle: "0% remaining" };
+        }
+      });
+    }
+
     const totalBudget = budgetCategories.reduce(
       (sum, cat) => sum + cat.budgetedAmount,
       0
@@ -348,38 +315,22 @@ export function BudgetTab() {
     });
   }, [budgetCategories]);
 
-  // Handle budget submission
-  const handleBudgetSubmit = (data: BudgetFormData) => {
-    try {
-      // Transform form data to budget category format
-      const newBudgetCategory = transformFormDataToBudgetCategory(data);
+  // Handle budget submission - just refresh the list
+  const handleBudgetSubmit = async () => {
+    // The dialog already handles the API call via the store
+    // Just refresh the budgets list
+    await fetchBudgets();
+  };
 
-      // Add new budget category to the list
-      const updatedCategories = [newBudgetCategory, ...budgetCategories];
-
-      // Save to localStorage
-      saveBudgetCategoriesToStorage(updatedCategories);
-
-      // Update state to trigger re-render
-      setBudgetCategories(updatedCategories);
-
-      // Show success toast
-      toast.success("Budget Created Successfully", {
-        description: `Budget for ${data.category} has been created.`,
-        duration: 3000,
-      });
-
-      console.log("Budget created successfully:", newBudgetCategory);
-    } catch (error) {
-      console.error("Error creating budget:", error);
-      // Show error toast
-      toast.error("Failed to Create Budget", {
-        description:
-          "An error occurred while creating the budget. Please try again.",
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to Load Budgets", {
+        description: error,
         duration: 4000,
       });
     }
-  };
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
@@ -397,40 +348,103 @@ export function BudgetTab() {
           onCreateBudgetClick={() => setIsCreateBudgetOpen(true)}
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {budgetCardConfigWithSubtitle.map((config) => (
-          <SimpleCard
-            key={config.dataKey}
-            title={config.title}
-            count={budgetCounts[config.dataKey]}
-            subtitle={config.subtitle}
-            countColor={config.countColor}
-            icon={config.icon}
-            iconBgColor={config.iconBgColor}
-            className={config.bgColor}
-          />
-        ))}
-      </div>
-      <div className="mt-4">
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-6">
-              Budget vs Actual by Category
-            </h2>
-            <div className="space-y-6">
-              {budgetCategoriesWithColor.map((category) => (
-                <BudgetCategoryItem
-                  key={category.id}
-                  title={category.title}
-                  actualSpending={category.actualSpending}
-                  budgetedAmount={category.budgetedAmount}
-                  usedColor={category.usedColor}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+
+      {loading && budgetCategories.length === 0 ? (
+        <>
+          {/* Skeleton Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+          
+          {/* Skeleton Category List */}
+          <Card className="bg-white">
+            <CardContent className="p-6">
+              <Skeleton className="h-6 w-48 mb-6" />
+              <div className="space-y-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                    <Skeleton className="h-2 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <>
+          {!loading && budgetCategories.length === 0 && !error && (
+            <>
+              {/* Show cards with "0" when no data */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {budgetCardConfigWithSubtitle.map((config) => (
+                  <SimpleCard
+                    key={config.dataKey}
+                    title={config.title}
+                    count={budgetCounts[config.dataKey]}
+                    subtitle={config.subtitle}
+                    countColor={config.countColor}
+                    icon={config.icon}
+                    iconBgColor={config.iconBgColor}
+                    className={config.bgColor}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-gray-500">No budgets found. Create your first budget to get started.</p>
+              </div>
+            </>
+          )}
+
+          {budgetCategories.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {budgetCardConfigWithSubtitle.map((config) => (
+                  <SimpleCard
+                    key={config.dataKey}
+                    title={config.title}
+                    count={budgetCounts[config.dataKey]}
+                    subtitle={config.subtitle}
+                    countColor={config.countColor}
+                    icon={config.icon}
+                    iconBgColor={config.iconBgColor}
+                    className={config.bgColor}
+                  />
+                ))}
+              </div>
+              <div className="mt-4">
+                <Card className="bg-white">
+                  <CardContent className="p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-6">
+                      Budget vs Actual by Category
+                    </h2>
+                    <div className="space-y-6">
+                      {budgetCategoriesWithColor.map((category) => (
+                        <BudgetCategoryItem
+                          key={category.id}
+                          title={category.title}
+                          actualSpending={category.actualSpending}
+                          budgetedAmount={category.budgetedAmount}
+                          usedColor={category.usedColor}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {/* Create Budget Dialog */}
       <CreateBudgetDialog

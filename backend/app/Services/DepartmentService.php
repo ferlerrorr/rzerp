@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Department;
-use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
 
 class DepartmentService
 {
@@ -72,21 +72,16 @@ class DepartmentService
     public function createDepartment(array $data): array
     {
         try {
-            DB::beginTransaction();
-
             $department = Department::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
             ]);
-
-            DB::commit();
 
             return [
                 'success' => true,
                 'department' => $department,
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to create department: ' . $e->getMessage(),
@@ -114,21 +109,16 @@ class DepartmentService
         }
 
         try {
-            DB::beginTransaction();
-
             $department->update([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
             ]);
-
-            DB::commit();
 
             return [
                 'success' => true,
                 'department' => $department->fresh(),
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to update department: ' . $e->getMessage(),
@@ -155,10 +145,8 @@ class DepartmentService
         }
 
         try {
-            // Check if department has employees
-            $employeeCount = DB::table('employees')
-                ->where('department', $department->name)
-                ->count();
+            // Check if department has employees using Eloquent
+            $employeeCount = Employee::where('department', $department->name)->count();
 
             if ($employeeCount > 0) {
                 return [
@@ -168,16 +156,13 @@ class DepartmentService
                 ];
             }
 
-            DB::beginTransaction();
             $department->delete();
-            DB::commit();
 
             return [
                 'success' => true,
                 'message' => 'Department deleted successfully',
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
             return [
                 'success' => false,
                 'message' => 'Failed to delete department: ' . $e->getMessage(),

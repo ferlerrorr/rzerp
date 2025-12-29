@@ -325,3 +325,192 @@ export async function deletePosition(id: number) {
   const response = await api.delete(`/api/positions/${id}`);
   return response.data;
 }
+
+// ============================================================================
+// Account API Functions
+// ============================================================================
+
+/**
+ * Get list of accounts with optional filters and pagination
+ * GET /api/accounts?per_page=15&search=...
+ */
+export async function getAccounts(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.account_type) params.account_type = filters.account_type;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/accounts", { params });
+  return response.data;
+}
+
+/**
+ * Get a single account by ID
+ * GET /api/accounts/{id}
+ */
+export async function getAccount(id: number) {
+  const response = await api.get(`/api/accounts/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new account
+ * POST /api/accounts
+ */
+export async function createAccount(data: Record<string, any>) {
+  const response = await api.post("/api/accounts", data);
+  return response.data;
+}
+
+/**
+ * Update an account
+ * PUT /api/accounts/{id}
+ */
+export async function updateAccount(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/accounts/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete an account
+ * DELETE /api/accounts/{id}
+ */
+export async function deleteAccount(id: number) {
+  const response = await api.delete(`/api/accounts/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Journal Entry API Functions
+// ============================================================================
+
+/**
+ * Get list of journal entries with optional filters and pagination
+ * GET /api/journal-entries?per_page=15&search=...
+ */
+export async function getJournalEntries(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.date_from) params.date_from = filters.date_from;
+  if (filters?.date_to) params.date_to = filters.date_to;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/journal-entries", { params });
+  return response.data;
+}
+
+/**
+ * Get a single journal entry by ID
+ * GET /api/journal-entries/{id}
+ */
+export async function getJournalEntry(id: number) {
+  const response = await api.get(`/api/journal-entries/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new journal entry
+ * POST /api/journal-entries
+ */
+export async function createJournalEntry(data: Record<string, any>) {
+  const response = await api.post("/api/journal-entries", data);
+  return response.data;
+}
+
+/**
+ * Update a journal entry
+ * PUT /api/journal-entries/{id}
+ */
+export async function updateJournalEntry(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/journal-entries/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a journal entry
+ * DELETE /api/journal-entries/{id}
+ */
+export async function deleteJournalEntry(id: number) {
+  const response = await api.delete(`/api/journal-entries/${id}`);
+  return response.data;
+}
+
+/**
+ * Post a journal entry (change status from Draft to Posted)
+ * POST /api/journal-entries/{id}/post
+ */
+export async function postJournalEntry(id: number) {
+  const response = await api.post(`/api/journal-entries/${id}/post`);
+  return response.data;
+}
+
+// ============================================================================
+// Budget API Functions
+// ============================================================================
+
+/**
+ * Get list of budgets with optional filters and pagination
+ * GET /api/budgets?per_page=15&search=...
+ */
+export async function getBudgets(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.period) params.period = filters.period;
+  if (filters?.category) params.category = filters.category;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/budgets", { params });
+  return response.data;
+}
+
+/**
+ * Get a single budget by ID
+ * GET /api/budgets/{id}
+ */
+export async function getBudget(id: number) {
+  const response = await api.get(`/api/budgets/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new budget
+ * POST /api/budgets
+ */
+export async function createBudget(data: Record<string, any>) {
+  const response = await api.post("/api/budgets", data);
+  return response.data;
+}
+
+/**
+ * Update a budget
+ * PUT /api/budgets/{id}
+ */
+export async function updateBudget(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/budgets/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a budget
+ * DELETE /api/budgets/{id}
+ */
+export async function deleteBudget(id: number) {
+  const response = await api.delete(`/api/budgets/${id}`);
+  return response.data;
+}

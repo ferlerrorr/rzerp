@@ -1,10 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
 import { JournalEntryDialog } from "@/components/dialogs/journal-entry-dialog";
-import { JournalEntryFormData } from "@/stores/journalEntry";
+import {
+  useJournalEntryStore,
+  JournalEntryFromAPI,
+} from "@/stores/journalEntry";
+import { useAccountStore } from "@/stores/account";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   FileText,
   CheckCircle2,
@@ -46,7 +51,7 @@ interface JournalEntriesCardConfig {
     | "red";
 }
 
-// Journal Entry Data
+// Journal Entry Data for display
 interface JournalEntry {
   id: string;
   date: string;
@@ -58,117 +63,9 @@ interface JournalEntry {
   status: "Posted" | "Draft";
 }
 
-// Account interface for loading from localStorage
-interface Account {
-  id: string;
-  accountType: string;
-  code: string;
-  accountName: string;
-  debit: string;
-  credit: string;
-  balance: string;
-}
-
-// Default journal entries
-const defaultJournalEntries: JournalEntry[] = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    reference: "JE-001",
-    description: "Monthly Sales Revenue",
-    debitAccount: "Accounts Receivable",
-    creditAccount: "Sales Revenue",
-    amount: "₱2,800,000",
-    status: "Posted",
-  },
-  {
-    id: "2",
-    date: "2024-01-20",
-    reference: "JE-002",
-    description: "Operating Expenses",
-    debitAccount: "Operating Expenses",
-    creditAccount: "Cash",
-    amount: "₱662,850",
-    status: "Posted",
-  },
-  {
-    id: "3",
-    date: "2024-01-25",
-    reference: "JE-003",
-    description: "Inventory Adjustment",
-    debitAccount: "Inventory",
-    creditAccount: "Cost of Goods Sold",
-    amount: "₱150,000",
-    status: "Posted",
-  },
-];
-
-// LocalStorage keys
-const JOURNAL_ENTRIES_STORAGE_KEY = "rzerp_journal_entries";
-const JOURNAL_ENTRY_COUNTER_KEY = "rzerp_journal_entry_counter";
-const ACCOUNTS_STORAGE_KEY = "rzerp_accounts";
-
-// Helper functions for localStorage
-const loadJournalEntriesFromStorage = (): JournalEntry[] => {
-  try {
-    const stored = localStorage.getItem(JOURNAL_ENTRIES_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Initialize with default entries if no data exists
-    saveJournalEntriesToStorage(defaultJournalEntries);
-    // Initialize counter
-    if (!localStorage.getItem(JOURNAL_ENTRY_COUNTER_KEY)) {
-      localStorage.setItem(JOURNAL_ENTRY_COUNTER_KEY, "3");
-    }
-    return defaultJournalEntries;
-  } catch (error) {
-    console.error("Error loading journal entries from localStorage:", error);
-    return defaultJournalEntries;
-  }
-};
-
-const saveJournalEntriesToStorage = (entries: JournalEntry[]) => {
-  try {
-    localStorage.setItem(JOURNAL_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
-  } catch (error) {
-    console.error("Error saving journal entries to localStorage:", error);
-  }
-};
-
-const getNextJournalEntryId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(JOURNAL_ENTRY_COUNTER_KEY) || "3",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(JOURNAL_ENTRY_COUNTER_KEY, nextCounter.toString());
-    return `JE-${nextCounter.toString().padStart(3, "0")}`;
-  } catch (error) {
-    console.error("Error getting next journal entry ID:", error);
-    return `JE-${Date.now()}`;
-  }
-};
-
-// Load accounts from general ledger
-const loadAccountsForJournal = (): Account[] => {
-  try {
-    const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return [];
-  } catch (error) {
-    console.error("Error loading accounts for journal:", error);
-    return [];
-  }
-};
-
-// Transform JournalEntryFormData to JournalEntry
-const transformFormDataToJournalEntry = (
-  formData: JournalEntryFormData,
-  accounts: Account[]
+// Transform API journal entry to display format
+const transformApiJournalEntryToJournalEntry = (
+  apiEntry: JournalEntryFromAPI
 ): JournalEntry => {
   const formatCurrency = (amount: number) => {
     return `₱${amount.toLocaleString("en-US", {
@@ -177,23 +74,17 @@ const transformFormDataToJournalEntry = (
     })}`;
   };
 
-  const debitAccount = accounts.find(
-    (acc) => acc.id === formData.debitAccountId
-  );
-  const creditAccount = accounts.find(
-    (acc) => acc.id === formData.creditAccountId
-  );
-  const amount = parseFloat(formData.amount) || 0;
+  const amount = parseFloat(apiEntry.amount) || 0;
 
   return {
-    id: getNextJournalEntryId(),
-    date: formData.date,
-    reference: formData.referenceNumber.trim(),
-    description: formData.description.trim(),
-    debitAccount: debitAccount?.accountName || "Unknown",
-    creditAccount: creditAccount?.accountName || "Unknown",
+    id: apiEntry.id.toString(),
+    date: apiEntry.date,
+    reference: apiEntry.reference_number,
+    description: apiEntry.description,
+    debitAccount: apiEntry.debit_account.account_name,
+    creditAccount: apiEntry.credit_account.account_name,
     amount: formatCurrency(amount),
-    status: "Draft", // New entries start as Draft
+    status: apiEntry.status,
   };
 };
 
@@ -223,6 +114,65 @@ const journalEntriesCardConfig: JournalEntriesCardConfig[] = [
     iconBgColor: "orange",
   },
 ];
+
+// Skeleton Components
+const CardSkeleton = () => (
+  <div className="w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2">
+    <div className="flex flex-row items-center justify-between">
+      <Skeleton className="h-4 w-16" />
+      <Skeleton className="h-11 w-11 rounded-full" />
+    </div>
+    <Skeleton className="h-8 w-20" />
+  </div>
+);
+
+const TableSkeleton = () => (
+  <div className="w-full">
+    <div className="space-y-4 pb-2">
+      <div className="w-full -mx-2 sm:mx-0">
+        <div
+          className="overflow-x-auto px-2 sm:px-0 scrollbar-thin"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="sm:min-w-0" style={{ minWidth: "min(100%, 1000px)" }}>
+            <div style={{ minWidth: "1000px" }}>
+              <div className="w-full border border-[#EFEFEF] rounded-2xl overflow-hidden bg-white">
+                {/* Table Header */}
+                <div className="bg-[#F4F4F5] border-b border-[#EFEFEF] rounded-t-2xl">
+                  <div className="flex h-12">
+                    <Skeleton className="h-6 w-24 m-3" />
+                    <Skeleton className="h-6 w-28 m-3" />
+                    <Skeleton className="h-6 w-40 m-3" />
+                    <Skeleton className="h-6 w-32 m-3" />
+                    <Skeleton className="h-6 w-32 m-3" />
+                    <Skeleton className="h-6 w-28 m-3" />
+                    <Skeleton className="h-6 w-24 m-3" />
+                    <Skeleton className="h-6 w-20 m-3" />
+                  </div>
+                </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-[#EFEFEF]">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex h-16 items-center">
+                      <Skeleton className="h-4 w-24 mx-4" />
+                      <Skeleton className="h-4 w-28 mx-4" />
+                      <Skeleton className="h-4 w-40 mx-4" />
+                      <Skeleton className="h-4 w-32 mx-4" />
+                      <Skeleton className="h-4 w-32 mx-4" />
+                      <Skeleton className="h-4 w-28 mx-4" />
+                      <Skeleton className="h-4 w-24 mx-4" />
+                      <Skeleton className="h-4 w-20 mx-4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // Table column definitions
 const journalEntryColumns: ColumnDef<JournalEntry>[] = [
@@ -268,17 +218,48 @@ const journalEntryColumns: ColumnDef<JournalEntry>[] = [
 ];
 
 export function JournalEntriesTab() {
-  // Load journal entries from localStorage on mount
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() =>
-    loadJournalEntriesFromStorage()
-  );
+  const {
+    journalEntries: apiJournalEntries,
+    loading,
+    error,
+    fetchJournalEntries,
+    deleteJournalEntry,
+  } = useJournalEntryStore();
+
+  const {
+    accounts: apiAccounts,
+    fetchAccounts,
+  } = useAccountStore();
 
   const [isNewJournalEntryOpen, setIsNewJournalEntryOpen] = useState(false);
 
-  // Load accounts for journal entry dialog
+  // Fetch journal entries and accounts on mount
+  useEffect(() => {
+    // Set high per_page to get all accounts
+    const { setFilters: setAccountFilters } = useAccountStore.getState();
+    setAccountFilters({ per_page: 1000 });
+    fetchAccounts();
+    
+    // Set high per_page to get all journal entries
+    const { setFilters: setJournalFilters } = useJournalEntryStore.getState();
+    setJournalFilters({ per_page: 1000 });
+    fetchJournalEntries();
+  }, [fetchJournalEntries, fetchAccounts]);
+
+  // Transform API journal entries to display format
+  const journalEntries = useMemo(() => {
+    return apiJournalEntries.map(transformApiJournalEntryToJournalEntry);
+  }, [apiJournalEntries]);
+
+  // Transform API accounts for dialog
   const accounts = useMemo(() => {
-    return loadAccountsForJournal();
-  }, []);
+    return apiAccounts.map((acc) => ({
+      id: acc.id.toString(),
+      code: acc.code,
+      accountName: acc.account_name,
+      accountType: acc.account_type,
+    }));
+  }, [apiAccounts]);
 
   // Calculate counts for cards
   const journalEntriesCounts = useMemo(() => {
@@ -298,57 +279,37 @@ export function JournalEntriesTab() {
   }, [journalEntries]);
 
   // Handle journal entry submission
-  const handleJournalEntrySubmit = (data: JournalEntryFormData) => {
-    try {
-      // Transform form data to journal entry format
-      const newJournalEntry = transformFormDataToJournalEntry(data, accounts);
-
-      // Add new journal entry to the beginning of the list
-      const updatedEntries = [newJournalEntry, ...journalEntries];
-
-      // Save to localStorage
-      saveJournalEntriesToStorage(updatedEntries);
-
-      // Update state to trigger re-render
-      setJournalEntries(updatedEntries);
-
-      // Show success toast
-      toast.success("Journal Entry Created Successfully", {
-        description: `Journal entry ${newJournalEntry.reference} has been created.`,
-        duration: 3000,
-      });
-
-      console.log("Journal entry created successfully:", newJournalEntry);
-    } catch (error) {
-      console.error("Error creating journal entry:", error);
-      // Show error toast
-      toast.error("Failed to Create Journal Entry", {
-        description:
-          "An error occurred while creating the journal entry. Please try again.",
-        duration: 4000,
-      });
-    }
+  const handleJournalEntrySubmit = async (_data?: unknown) => {
+    // The dialog already handles the API call via the store
+    // Just refresh the journal entries list
+    await fetchJournalEntries();
   };
 
   // Handle delete journal entry
-  const handleDeleteJournalEntry = (entry: JournalEntry) => {
-    try {
-      const updatedEntries = journalEntries.filter((e) => e.id !== entry.id);
-      saveJournalEntriesToStorage(updatedEntries);
-      setJournalEntries(updatedEntries);
-
+  const handleDeleteJournalEntry = async (entry: JournalEntry) => {
+    const result = await deleteJournalEntry(parseInt(entry.id));
+    if (result) {
       toast.success("Journal Entry Deleted", {
         description: `Journal entry ${entry.reference} has been deleted.`,
         duration: 3000,
       });
-    } catch (error) {
-      console.error("Error deleting journal entry:", error);
+    } else {
       toast.error("Failed to Delete Journal Entry", {
         description: "An error occurred while deleting the journal entry.",
         duration: 4000,
       });
     }
   };
+
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to Load Journal Entries", {
+        description: error,
+        duration: 4000,
+      });
+    }
+  }, [error]);
 
   // Update actions with delete handler
   const journalEntryActions = useMemo<ActionItem<JournalEntry>[]>(
@@ -393,29 +354,56 @@ export function JournalEntriesTab() {
           onNewJournalEntryClick={() => setIsNewJournalEntryOpen(true)}
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-        {journalEntriesCardConfig.map((card) => (
-          <SimpleCard
-            key={card.dataKey}
-            title={card.title}
-            count={journalEntriesCounts[card.dataKey]}
-            countColor={card.countColor}
-            icon={card.icon}
-            iconBgColor={card.iconBgColor}
-            className={card.bgColor}
-          />
-        ))}
-      </div>
-      <div className="w-full">
-        <AppTable
-          data={journalEntries}
-          columns={journalEntryColumns}
-          actions={journalEntryActions}
-          itemsPerPage={5}
-          minWidth="1000px"
-          getRowId={(row) => row.id}
-        />
-      </div>
+      
+      {loading && journalEntries.length === 0 ? (
+        <>
+          {/* Skeleton Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
+            {[...Array(3)].map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+          
+          {/* Skeleton Table */}
+          <TableSkeleton />
+        </>
+      ) : (
+        <>
+          {!loading && journalEntries.length === 0 && !error && (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-sm text-gray-500">No journal entries found. Create your first journal entry to get started.</p>
+            </div>
+          )}
+
+          {journalEntries.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
+                {journalEntriesCardConfig.map((card) => (
+                  <SimpleCard
+                    key={card.dataKey}
+                    title={card.title}
+                    count={journalEntriesCounts[card.dataKey]}
+                    countColor={card.countColor}
+                    icon={card.icon}
+                    iconBgColor={card.iconBgColor}
+                    className={card.bgColor}
+                  />
+                ))}
+              </div>
+              <div className="w-full">
+                <AppTable
+                  data={journalEntries}
+                  columns={journalEntryColumns}
+                  actions={journalEntryActions}
+                  itemsPerPage={5}
+                  minWidth="1000px"
+                  getRowId={(row) => row.id}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {/* New Journal Entry Dialog */}
       <JournalEntryDialog
@@ -423,12 +411,7 @@ export function JournalEntriesTab() {
         onOpenChange={setIsNewJournalEntryOpen}
         title="New Journal Entry"
         onSubmit={handleJournalEntrySubmit}
-        accounts={accounts.map((acc) => ({
-          id: acc.id,
-          code: acc.code,
-          accountName: acc.accountName,
-          accountType: acc.accountType,
-        }))}
+        accounts={accounts}
       />
     </div>
   );
