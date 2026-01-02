@@ -13,7 +13,17 @@ return new class extends Migration
     {
         Schema::create('vendors', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('company_name');
+            $table->string('contact_person')->nullable();
+            $table->string('category');
+            $table->string('email');
+            $table->string('phone');
+            $table->text('address');
+            $table->string('tin')->nullable();
+            $table->string('payment_terms')->nullable();
+            $table->enum('status', ['Active', 'Inactive'])->default('Active');
+            $table->decimal('total_purchases', 15, 2)->default(0);
+            $table->decimal('outstanding', 15, 2)->default(0);
             $table->timestamps();
         });
     }
