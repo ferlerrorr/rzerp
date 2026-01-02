@@ -26,6 +26,7 @@ import {
   PurchaseOrderFormData,
   POItem,
 } from "@/stores/purchaseOrder";
+import { useVendorStore } from "@/stores/vendor";
 
 export interface CreatePODialogProps {
   open: boolean;
@@ -51,6 +52,8 @@ export function CreatePODialog({
     validateForm,
     resetForm,
   } = usePurchaseOrderStore();
+  
+  const { vendors } = useVendorStore();
 
   // Sync dialog open state with store
   useEffect(() => {
@@ -77,12 +80,16 @@ export function CreatePODialog({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const { createPurchaseOrder } = usePurchaseOrderStore.getState();
+      const result = await createPurchaseOrder(formData);
+      if (result) {
+        onOpenChange(false);
+        resetForm();
+        onSubmit?.(formData);
+      }
     }
   };
 
@@ -98,15 +105,10 @@ export function CreatePODialog({
     })}`;
   };
 
-  // Default vendors
-  const vendorOptions = [
-    "Tech Supplies Inc.",
-    "Office Depot PH",
-    "ABC Suppliers Co.",
-    "XYZ Trading Co.",
-    "Global Distributors",
-    "Other",
-  ];
+  // Get vendors from store, fallback to empty array
+  const vendorOptions = vendors.length > 0 
+    ? vendors.map(v => v.company_name)
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -269,17 +271,17 @@ export function CreatePODialog({
                       <span className="text-sm font-medium text-foreground">
                         Item {index + 1}
                       </span>
-                      {formData.items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        disabled={formData.items.length === 1}
+                        title={formData.items.length === 1 ? "At least one item is required" : "Remove item"}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

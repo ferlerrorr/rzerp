@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useReceivableInvoiceStore, ReceivableInvoiceFormData } from "@/stores/receivableInvoice";
+import { useCustomerStore } from "@/stores/customer";
 
 export interface CreateInvoiceDialogProps {
   open: boolean;
@@ -34,8 +35,17 @@ export function CreateInvoiceDialog({
   title = "Create Invoice",
   onSubmit,
 }: CreateInvoiceDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
+  const { formData, errors, updateField, setIsOpen, validateForm, resetForm, createReceivableInvoice } =
     useReceivableInvoiceStore();
+  
+  const { customers, fetchCustomers } = useCustomerStore();
+
+  // Fetch customers on mount
+  useEffect(() => {
+    const { setFilters } = useCustomerStore.getState();
+    setFilters({ per_page: 1000 });
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   // Sync dialog open state with store
   useEffect(() => {
@@ -46,12 +56,15 @@ export function CreateInvoiceDialog({
     updateField(field, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createReceivableInvoice(formData);
+      if (result) {
+        onOpenChange(false);
+        resetForm();
+        onSubmit?.(formData);
+      }
     }
   };
 
@@ -105,15 +118,25 @@ export function CreateInvoiceDialog({
               <Label htmlFor="customer" className="text-sm">
                 Customer <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="customer"
-                value={formData.customer}
-                onChange={(e) => handleChange("customer", e.target.value)}
-                placeholder="Enter customer name"
-                className={errors.customer ? "border-destructive" : ""}
-              />
-              {errors.customer && (
-                <p className="text-xs text-destructive">{errors.customer}</p>
+              <Select
+                value={formData.customerId}
+                onValueChange={(value) => handleChange("customerId", value)}
+              >
+                <SelectTrigger
+                  className={errors.customerId ? "border-destructive" : ""}
+                >
+                  <SelectValue placeholder="Select Customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                      {customer.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.customerId && (
+                <p className="text-xs text-destructive">{errors.customerId}</p>
               )}
             </div>
 
@@ -218,6 +241,22 @@ export function CreateInvoiceDialog({
                   <p className="text-xs text-destructive">
                     {errors.paymentTerms}
                   </p>
+                )}
+                {formData.paymentTerms === "Custom" && (
+                  <div className="mt-2">
+                    <Input
+                      id="customPaymentTerms"
+                      value={formData.customPaymentTerms}
+                      onChange={(e) => handleChange("customPaymentTerms", e.target.value)}
+                      placeholder="Enter custom payment terms"
+                      className={errors.customPaymentTerms ? "border-destructive" : ""}
+                    />
+                    {errors.customPaymentTerms && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.customPaymentTerms}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

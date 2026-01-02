@@ -10,6 +10,12 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\JournalEntryController;
 use App\Http\Controllers\Api\BudgetController;
+use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\VendorController;
+use App\Http\Controllers\Api\ReceivableInvoiceController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Models\User;
 use Illuminate\Http\Request;
 /*
@@ -175,6 +181,57 @@ Route::middleware('rz.auth')->group(function () {
         Route::get('/{id}', [BudgetController::class, 'show'])->middleware('permission:finance.view');
         Route::put('/{id}', [BudgetController::class, 'update'])->middleware('permission:finance.update');
         Route::delete('/{id}', [BudgetController::class, 'destroy'])->middleware('permission:finance.delete');
+    });
+
+    // Invoice management routes with permission checks
+    Route::prefix('invoices')->group(function () {
+        Route::get('/', [InvoiceController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [InvoiceController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [InvoiceController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [InvoiceController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [InvoiceController::class, 'destroy'])->middleware('permission:finance.delete');
+        Route::post('/{id}/approve', [InvoiceController::class, 'approve'])->middleware('permission:finance.update');
+        Route::post('/{id}/pay', [InvoiceController::class, 'pay'])->middleware('permission:finance.update');
+    });
+
+    // Vendor management routes with permission checks
+    Route::prefix('vendors')->group(function () {
+        Route::get('/', [VendorController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [VendorController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [VendorController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [VendorController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [VendorController::class, 'destroy'])->middleware('permission:finance.delete');
+    });
+
+    // Customer management routes with permission checks
+    Route::prefix('customers')->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])->middleware('permission:finance.view');
+        Route::get('/{id}', [CustomerController::class, 'show'])->middleware('permission:finance.view');
+    });
+
+    // Receivable Invoice management routes with permission checks
+    Route::prefix('receivable-invoices')->group(function () {
+        Route::get('/', [ReceivableInvoiceController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [ReceivableInvoiceController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [ReceivableInvoiceController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [ReceivableInvoiceController::class, 'update'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [ReceivableInvoiceController::class, 'destroy'])->middleware('permission:finance.delete');
+    });
+
+    // Payment management routes with permission checks
+    Route::prefix('payments')->group(function () {
+        Route::post('/', [PaymentController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/invoice/{invoiceId}', [PaymentController::class, 'getByInvoice'])->middleware('permission:finance.view');
+    });
+
+    // Purchase Order management routes with permission checks
+    Route::prefix('purchase-orders')->group(function () {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->middleware('permission:finance.view');
+        Route::post('/', [PurchaseOrderController::class, 'store'])->middleware('permission:finance.create');
+        Route::get('/{id}', [PurchaseOrderController::class, 'show'])->middleware('permission:finance.view');
+        Route::put('/{id}', [PurchaseOrderController::class, 'update'])->middleware('permission:finance.update');
+        Route::patch('/{id}/status', [PurchaseOrderController::class, 'updateStatus'])->middleware('permission:finance.update');
+        Route::delete('/{id}', [PurchaseOrderController::class, 'destroy'])->middleware('permission:finance.delete');
     });
     
     // Add your other protected routes here

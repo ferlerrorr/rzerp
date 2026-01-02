@@ -41,7 +41,7 @@ export function AddInvoiceDialog({
   onSubmit,
   vendors = [],
 }: AddInvoiceDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
+  const { formData, errors, updateField, setIsOpen, validateForm, resetForm, createInvoice } =
     useInvoiceStore();
 
   // Sync dialog open state with store
@@ -53,12 +53,15 @@ export function AddInvoiceDialog({
     updateField(field, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createInvoice(formData);
+      if (result) {
+        onOpenChange(false);
+        resetForm();
+        onSubmit?.(formData);
+      }
     }
   };
 
@@ -235,6 +238,22 @@ export function AddInvoiceDialog({
                 </Select>
                 {errors.category && (
                   <p className="text-xs text-destructive">{errors.category}</p>
+                )}
+                {formData.category === "Other" && (
+                  <div className="mt-2">
+                    <Input
+                      id="customCategory"
+                      value={formData.customCategory}
+                      onChange={(e) => handleChange("customCategory", e.target.value)}
+                      placeholder="Enter custom category"
+                      className={errors.customCategory ? "border-destructive" : ""}
+                    />
+                    {errors.customCategory && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.customCategory}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

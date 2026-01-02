@@ -548,3 +548,337 @@ export async function deleteBudget(id: number) {
   const response = await api.delete(`/api/budgets/${id}`);
   return response.data;
 }
+
+// ============================================================================
+// Invoice API Functions
+// ============================================================================
+
+/**
+ * Get list of invoices with optional filters and pagination
+ * GET /api/invoices?per_page=15&search=...
+ */
+export async function getInvoices(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.vendor_id) params.vendor_id = filters.vendor_id;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/invoices", { params });
+  return response.data;
+}
+
+/**
+ * Get a single invoice by ID
+ * GET /api/invoices/{id}
+ */
+export async function getInvoice(id: number) {
+  const response = await api.get(`/api/invoices/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new invoice
+ * POST /api/invoices
+ */
+export async function createInvoice(data: Record<string, any>) {
+  const response = await api.post("/api/invoices", data);
+  return response.data;
+}
+
+/**
+ * Update an invoice
+ * PUT /api/invoices/{id}
+ */
+export async function updateInvoice(
+  id: number,
+  data: Record<string, any>
+) {
+  const response = await api.put(`/api/invoices/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete an invoice
+ * DELETE /api/invoices/{id}
+ */
+export async function deleteInvoice(id: number) {
+  const response = await api.delete(`/api/invoices/${id}`);
+  return response.data;
+}
+
+/**
+ * Approve an invoice
+ * POST /api/invoices/{id}/approve
+ */
+export async function approveInvoice(id: number) {
+  const response = await api.post(`/api/invoices/${id}/approve`);
+  return response.data;
+}
+
+/**
+ * Mark invoice as paid
+ * POST /api/invoices/{id}/pay
+ */
+export async function payInvoice(id: number) {
+  const response = await api.post(`/api/invoices/${id}/pay`);
+  return response.data;
+}
+
+// ============================================================================
+// Vendor API Functions
+// ============================================================================
+
+/**
+ * Get list of vendors with optional filters and pagination
+ * GET /api/vendors?per_page=100&search=...
+ */
+export async function getVendors(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 100;
+
+  const response = await api.get("/api/vendors", { params });
+  return response.data;
+}
+
+/**
+ * Get a single vendor by ID
+ * GET /api/vendors/{id}
+ */
+export async function getVendor(id: number) {
+  const response = await api.get(`/api/vendors/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new vendor
+ * POST /api/vendors
+ */
+export async function createVendor(data: Record<string, any>) {
+  const response = await api.post("/api/vendors", data);
+  return response.data;
+}
+
+/**
+ * Update a vendor
+ * PUT /api/vendors/{id}
+ */
+export async function updateVendor(
+  id: number,
+  data: Record<string, any>
+) {
+  const response = await api.put(`/api/vendors/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a vendor
+ * DELETE /api/vendors/{id}
+ */
+export async function deleteVendor(id: number) {
+  const response = await api.delete(`/api/vendors/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Customer API Functions
+// ============================================================================
+
+/**
+ * Get list of customers with optional filters and pagination
+ * GET /api/customers?per_page=100&search=...
+ */
+export async function getCustomers(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status) params.status = filters.status;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 100;
+
+  const response = await api.get("/api/customers", { params });
+  return response.data;
+}
+
+/**
+ * Get a single customer by ID
+ * GET /api/customers/{id}
+ */
+export async function getCustomer(id: number) {
+  const response = await api.get(`/api/customers/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Receivable Invoice API Functions
+// ============================================================================
+
+/**
+ * Get list of receivable invoices with optional filters and pagination
+ * GET /api/receivable-invoices?per_page=15&search=...
+ */
+export async function getReceivableInvoices(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.customer_id) params.customer_id = filters.customer_id;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/receivable-invoices", { params });
+  return response.data;
+}
+
+/**
+ * Get a single receivable invoice by ID
+ * GET /api/receivable-invoices/{id}
+ */
+export async function getReceivableInvoice(id: number) {
+  const response = await api.get(`/api/receivable-invoices/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new receivable invoice
+ * POST /api/receivable-invoices
+ */
+export async function createReceivableInvoice(data: Record<string, any>) {
+  const response = await api.post("/api/receivable-invoices", data);
+  return response.data;
+}
+
+/**
+ * Update a receivable invoice
+ * PUT /api/receivable-invoices/{id}
+ */
+export async function updateReceivableInvoice(
+  id: number,
+  data: Record<string, any>
+) {
+  const response = await api.put(`/api/receivable-invoices/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Delete a receivable invoice
+ * DELETE /api/receivable-invoices/{id}
+ */
+export async function deleteReceivableInvoice(id: number) {
+  const response = await api.delete(`/api/receivable-invoices/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Payment API Functions
+// ============================================================================
+
+/**
+ * Record a payment for a receivable invoice
+ * POST /api/payments
+ */
+export async function recordPayment(data: Record<string, any>) {
+  const response = await api.post("/api/payments", data);
+  return response.data;
+}
+
+/**
+ * Get payments for a receivable invoice
+ * GET /api/payments/invoice/{invoiceId}
+ */
+export async function getPaymentsByInvoice(invoiceId: number) {
+  const response = await api.get(`/api/payments/invoice/${invoiceId}`);
+  return response.data;
+}
+
+// ============================================================================
+// Purchase Order API Functions
+// ============================================================================
+
+/**
+ * Get list of purchase orders with optional filters and pagination
+ * GET /api/purchase-orders?per_page=15&search=...
+ */
+export async function getPurchaseOrders(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.vendor_id) params.vendor_id = filters.vendor_id;
+
+  // Default per_page if not provided
+  if (!params.per_page) params.per_page = 15;
+
+  const response = await api.get("/api/purchase-orders", { params });
+  return response.data;
+}
+
+/**
+ * Get a single purchase order by ID
+ * GET /api/purchase-orders/{id}
+ */
+export async function getPurchaseOrder(id: number) {
+  const response = await api.get(`/api/purchase-orders/${id}`);
+  return response.data;
+}
+
+/**
+ * Create a new purchase order
+ * POST /api/purchase-orders
+ */
+export async function createPurchaseOrder(data: Record<string, any>) {
+  const response = await api.post("/api/purchase-orders", data);
+  return response.data;
+}
+
+/**
+ * Update a purchase order
+ * PUT /api/purchase-orders/{id}
+ */
+export async function updatePurchaseOrder(
+  id: number,
+  data: Record<string, any>
+) {
+  const response = await api.put(`/api/purchase-orders/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Update purchase order status
+ * PATCH /api/purchase-orders/{id}/status
+ */
+export async function updatePurchaseOrderStatus(
+  id: number,
+  status: string
+) {
+  const response = await api.patch(`/api/purchase-orders/${id}/status`, { status });
+  return response.data;
+}
+
+/**
+ * Delete a purchase order
+ * DELETE /api/purchase-orders/{id}
+ */
+export async function deletePurchaseOrder(id: number) {
+  const response = await api.delete(`/api/purchase-orders/${id}`);
+  return response.data;
+}

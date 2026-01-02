@@ -33,7 +33,7 @@ export function AddVendorDialog({
   title = "Add Vendor",
   onSubmit,
 }: AddVendorDialogProps) {
-  const { formData, errors, updateField, setIsOpen, validateForm, resetForm } =
+  const { formData, errors, updateField, setIsOpen, validateForm, resetForm, createVendor } =
     useVendorStore();
 
   // Sync dialog open state with store
@@ -45,12 +45,15 @@ export function AddVendorDialog({
     updateField(field, value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
-      onOpenChange(false);
-      resetForm();
+      const result = await createVendor(formData);
+      if (result) {
+        onOpenChange(false);
+        resetForm();
+        onSubmit?.(formData);
+      }
     }
   };
 
@@ -157,6 +160,22 @@ export function AddVendorDialog({
               {errors.category && (
                 <p className="text-xs text-destructive">{errors.category}</p>
               )}
+              {formData.category === "Other" && (
+                <div className="mt-2">
+                  <Input
+                    id="customCategory"
+                    value={formData.customCategory}
+                    onChange={(e) => handleChange("customCategory", e.target.value)}
+                    placeholder="Enter custom category"
+                    className={errors.customCategory ? "border-destructive" : ""}
+                  />
+                  {errors.customCategory && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.customCategory}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Email and Phone */}
@@ -255,6 +274,22 @@ export function AddVendorDialog({
                   <p className="text-xs text-destructive">
                     {errors.paymentTerms}
                   </p>
+                )}
+                {formData.paymentTerms === "Custom" && (
+                  <div className="mt-2">
+                    <Input
+                      id="customPaymentTerms"
+                      value={formData.customPaymentTerms}
+                      onChange={(e) => handleChange("customPaymentTerms", e.target.value)}
+                      placeholder="Enter custom payment terms"
+                      className={errors.customPaymentTerms ? "border-destructive" : ""}
+                    />
+                    {errors.customPaymentTerms && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.customPaymentTerms}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="space-y-2">

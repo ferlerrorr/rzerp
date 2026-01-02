@@ -4,7 +4,10 @@ import { SimpleCard } from "@/components/card/simpleCard";
 import { CreateInvoiceDialog } from "@/components/dialogs/create-invoice-dialog";
 import { RecordPaymentDialog } from "@/components/dialogs/record-payment-dialog";
 import { ActionItem, AppTable, ColumnDef } from "@/components/table/appTable";
-import { ReceivableInvoiceFormData } from "@/stores/receivableInvoice";
+import {
+  useReceivableInvoiceStore,
+  ReceivableInvoiceFromAPI,
+} from "@/stores/receivableInvoice";
 import {
   AlertCircle,
   Calendar,
@@ -13,8 +16,8 @@ import {
   DollarSign,
   Eye,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useMemo, useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AccountReceivableCounts {
   totalReceivable: string;
@@ -54,210 +57,7 @@ interface AccountReceivableCardConfig {
   subtitle: string;
 }
 
-// Default invoices
-const defaultInvoices: Invoice[] = [
-  {
-    id: "1",
-    invoiceNumber: "INV-2024-001",
-    customer: "ABC Corporation",
-    description: "Software licensing and support",
-    invoiceDate: "2024-12-01",
-    dueDate: "2024-12-15",
-    amount: "₱200,000",
-    balance: "₱200,000",
-    status: "Pending",
-  },
-  {
-    id: "2",
-    invoiceNumber: "INV-2024-002",
-    customer: "XYZ Industries",
-    description: "Professional consulting services",
-    invoiceDate: "2024-11-20",
-    dueDate: "2024-12-05",
-    amount: "₱125,000",
-    balance: "₱125,000",
-    status: "Overdue",
-  },
-  {
-    id: "3",
-    invoiceNumber: "INV-2024-003",
-    customer: "Tech Solutions Ltd.",
-    description: "Monthly retainer services",
-    invoiceDate: "2024-12-05",
-    dueDate: "2024-12-20",
-    amount: "₱245,000",
-    balance: "₱245,000",
-    status: "Pending",
-  },
-  {
-    id: "4",
-    invoiceNumber: "INV-2024-004",
-    customer: "Global Enterprises",
-    description: "Product delivery and installation",
-    invoiceDate: "2024-11-15",
-    dueDate: "2024-11-30",
-    amount: "₱85,000",
-    balance: "₱0",
-    status: "Paid",
-  },
-  {
-    id: "5",
-    invoiceNumber: "INV-2024-005",
-    customer: "Startup Inc.",
-    description: "Custom development project",
-    invoiceDate: "2024-12-10",
-    dueDate: "2024-12-25",
-    amount: "₱150,000",
-    balance: "₱75,000",
-    status: "Partial",
-  },
-];
-
-// LocalStorage keys
-const RECEIVABLE_INVOICES_STORAGE_KEY = "rzerp_receivable_invoices";
-const RECEIVABLE_INVOICE_COUNTER_KEY = "rzerp_receivable_invoice_counter";
-
-// Helper functions for localStorage
-const loadInvoicesFromStorage = (): Invoice[] => {
-  try {
-    const stored = localStorage.getItem(RECEIVABLE_INVOICES_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Initialize with default invoices if no data exists
-    saveInvoicesToStorage(defaultInvoices);
-    // Initialize counter
-    if (!localStorage.getItem(RECEIVABLE_INVOICE_COUNTER_KEY)) {
-      localStorage.setItem(RECEIVABLE_INVOICE_COUNTER_KEY, "5");
-    }
-    return defaultInvoices;
-  } catch (error) {
-    console.error("Error loading invoices from localStorage:", error);
-    return defaultInvoices;
-  }
-};
-
-const saveInvoicesToStorage = (invoices: Invoice[]) => {
-  try {
-    localStorage.setItem(
-      RECEIVABLE_INVOICES_STORAGE_KEY,
-      JSON.stringify(invoices)
-    );
-  } catch (error) {
-    console.error("Error saving invoices to localStorage:", error);
-  }
-};
-
-const getNextInvoiceId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(RECEIVABLE_INVOICE_COUNTER_KEY) || "5",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(
-      RECEIVABLE_INVOICE_COUNTER_KEY,
-      nextCounter.toString()
-    );
-    return nextCounter.toString();
-  } catch (error) {
-    console.error("Error getting next invoice ID:", error);
-    return Date.now().toString();
-  }
-};
-
-// Calculate invoice status based on due date and balance
-const calculateInvoiceStatus = (
-  dueDate: string,
-  balance: number,
-  amount: number
-): "Pending" | "Paid" | "Overdue" | "Partial" => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
-
-  if (balance === 0) {
-    return "Paid";
-  }
-
-  if (balance < amount) {
-    return "Partial";
-  }
-
-  if (due < today) {
-    return "Overdue";
-  }
-
-  return "Pending";
-};
-
-// Transform ReceivableInvoiceFormData to Invoice
-const transformFormDataToInvoice = (
-  formData: ReceivableInvoiceFormData
-): Invoice => {
-  const formatCurrency = (amount: number) => {
-    return `₱${amount.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
-  const amount = parseFloat(formData.amount) || 0;
-  const status = calculateInvoiceStatus(formData.dueDate, amount, amount);
-
-  return {
-    id: getNextInvoiceId(),
-    invoiceNumber: formData.invoiceNumber.trim(),
-    customer: formData.customer.trim(),
-    description: formData.description.trim(),
-    invoiceDate: formData.invoiceDate,
-    dueDate: formData.dueDate,
-    amount: formatCurrency(amount),
-    balance: formatCurrency(amount),
-    status,
-  };
-};
-
-const accountReceivableCardConfig: AccountReceivableCardConfig[] = [
-  {
-    title: "Total Receivable",
-    dataKey: "totalReceivable",
-    countColor: "black",
-    bgColor: "bg-white",
-    icon: DollarSign,
-    iconBgColor: "blue",
-    subtitle: "3 outstanding invoices",
-  },
-  {
-    title: "Overdue",
-    dataKey: "overdue",
-    countColor: "red",
-    bgColor: "bg-white",
-    icon: AlertCircle,
-    iconBgColor: "red",
-    subtitle: "1 overdue invoices",
-  },
-  {
-    title: "Collected This Month",
-    dataKey: "collectedThisMonth",
-    countColor: "green",
-    bgColor: "bg-white",
-    icon: CheckCircle2,
-    iconBgColor: "green",
-    subtitle: "1 paid invoices",
-  },
-  {
-    title: "Avg. Collection Time",
-    dataKey: "avgCollectionTime",
-    countColor: "purple",
-    bgColor: "bg-white",
-    icon: Calendar,
-    iconBgColor: "purple",
-    subtitle: "average payment time",
-  },
-];
-
+// Invoice Data for display
 interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -269,6 +69,72 @@ interface Invoice {
   balance: string;
   status: "Pending" | "Paid" | "Overdue" | "Partial";
 }
+
+// Transform API invoice to display format
+const transformApiReceivableInvoiceToInvoice = (
+  apiInvoice: ReceivableInvoiceFromAPI
+): Invoice => {
+  const formatCurrency = (amount: number) => {
+    return `₱${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const amount = parseFloat(apiInvoice.amount) || 0;
+  const balance = parseFloat(apiInvoice.balance) || 0;
+
+  return {
+    id: apiInvoice.id.toString(),
+    invoiceNumber: apiInvoice.invoice_number,
+    customer: apiInvoice.customer.company_name,
+    description: apiInvoice.description,
+    invoiceDate: apiInvoice.invoice_date,
+    dueDate: apiInvoice.due_date,
+    amount: formatCurrency(amount),
+    balance: formatCurrency(balance),
+    status: apiInvoice.status,
+  };
+};
+
+const accountReceivableCardConfig: AccountReceivableCardConfig[] = [
+  {
+    title: "Total Receivable",
+    dataKey: "totalReceivable",
+    countColor: "black",
+    bgColor: "bg-white",
+    icon: DollarSign,
+    iconBgColor: "blue",
+    subtitle: "outstanding invoices",
+  },
+  {
+    title: "Overdue",
+    dataKey: "overdue",
+    countColor: "red",
+    bgColor: "bg-white",
+    icon: AlertCircle,
+    iconBgColor: "red",
+    subtitle: "overdue invoices",
+  },
+  {
+    title: "Collected This Month",
+    dataKey: "collectedThisMonth",
+    countColor: "green",
+    bgColor: "bg-white",
+    icon: CheckCircle2,
+    iconBgColor: "green",
+    subtitle: "paid invoices",
+  },
+  {
+    title: "Avg. Collection Time",
+    dataKey: "avgCollectionTime",
+    countColor: "purple",
+    bgColor: "bg-white",
+    icon: Calendar,
+    iconBgColor: "purple",
+    subtitle: "average payment time",
+  },
+];
 
 const invoiceColumns: ColumnDef<Invoice>[] = [
   {
@@ -317,19 +183,62 @@ const invoiceColumns: ColumnDef<Invoice>[] = [
   },
 ];
 
+// Skeleton components
+const CardSkeleton = () => (
+  <div className="bg-white rounded-lg border border-border p-6">
+    <div className="flex items-center justify-between mb-4">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-10 w-10 rounded-full" />
+    </div>
+    <Skeleton className="h-8 w-24 mb-2" />
+    <Skeleton className="h-3 w-40" />
+  </div>
+);
+
+const TableSkeleton = () => (
+  <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="p-4 space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
+  </div>
+);
+
 export function AccountReceivableTab() {
-  // Load invoices from localStorage on mount
-  const [invoices, setInvoices] = useState<Invoice[]>(() =>
-    loadInvoicesFromStorage()
-  );
+  const {
+    receivableInvoices,
+    loading,
+    fetchReceivableInvoices,
+    recordPayment,
+  } = useReceivableInvoiceStore();
 
   const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
     useState<Invoice | null>(null);
 
+  // Fetch invoices on mount
+  useEffect(() => {
+    fetchReceivableInvoices();
+  }, [fetchReceivableInvoices]);
+
+  // Transform API invoices to display format
+  const invoices = useMemo(() => {
+    return receivableInvoices.map(transformApiReceivableInvoiceToInvoice);
+  }, [receivableInvoices]);
+
   // Calculate account receivable counts dynamically
   const accountReceivableCounts = useMemo(() => {
+    if (invoices.length === 0) {
+      return {
+        totalReceivable: "0",
+        overdue: "0",
+        collectedThisMonth: "0",
+        avgCollectionTime: "0 days",
+      };
+    }
+
     const formatCurrency = (amount: number): string => {
       return `₱${amount.toLocaleString("en-US", {
         minimumFractionDigits: 2,
@@ -412,98 +321,17 @@ export function AccountReceivableTab() {
     });
   }, [invoices]);
 
-  // Handle invoice submission
-  const handleInvoiceSubmit = (data: ReceivableInvoiceFormData) => {
-    try {
-      // Transform form data to invoice format
-      const newInvoice = transformFormDataToInvoice(data);
-
-      // Add new invoice to the beginning of the list
-      const updatedInvoices = [newInvoice, ...invoices];
-
-      // Save to localStorage
-      saveInvoicesToStorage(updatedInvoices);
-
-      // Update state to trigger re-render
-      setInvoices(updatedInvoices);
-
-      // Show success toast
-      toast.success("Invoice Created Successfully", {
-        description: `Invoice ${newInvoice.invoiceNumber} has been created.`,
-        duration: 3000,
-      });
-
-      console.log("Invoice created successfully:", newInvoice);
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      // Show error toast
-      toast.error("Failed to Create Invoice", {
-        description:
-          "An error occurred while creating the invoice. Please try again.",
-        duration: 4000,
-      });
-    }
+  // Handle invoice submission (refresh after creation)
+  const handleInvoiceSubmit = () => {
+    fetchReceivableInvoices();
   };
 
   // Handle record payment
-  const handleRecordPayment = (invoiceId: string, paymentAmount: number) => {
-    try {
-      const formatCurrency = (amount: number) => {
-        return `₱${amount.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`;
-      };
-
-      const parseCurrency = (value: string) => {
-        return parseFloat(value.replace(/[₱,]/g, "")) || 0;
-      };
-
-      const updatedInvoices = invoices.map((inv) => {
-        if (inv.id === invoiceId) {
-          const currentBalance = parseCurrency(inv.balance);
-          const newBalance = Math.max(0, currentBalance - paymentAmount);
-          const totalAmount = parseCurrency(inv.amount);
-
-          let newStatus: "Pending" | "Paid" | "Overdue" | "Partial" = "Pending";
-          if (newBalance === 0) {
-            newStatus = "Paid";
-          } else if (newBalance < totalAmount) {
-            newStatus = "Partial";
-          } else {
-            // Recalculate status based on due date
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const due = new Date(inv.dueDate);
-            due.setHours(0, 0, 0, 0);
-            newStatus = due < today ? "Overdue" : "Pending";
-          }
-
-          return {
-            ...inv,
-            balance: formatCurrency(newBalance),
-            status: newStatus,
-          };
-        }
-        return inv;
-      });
-
-      saveInvoicesToStorage(updatedInvoices);
-      setInvoices(updatedInvoices);
-
-      const invoice = invoices.find((inv) => inv.id === invoiceId);
-      toast.success("Payment Recorded", {
-        description: `Payment of ${formatCurrency(
-          paymentAmount
-        )} recorded for invoice ${invoice?.invoiceNumber}.`,
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Error recording payment:", error);
-      toast.error("Failed to Record Payment", {
-        description: "An error occurred while recording the payment.",
-        duration: 4000,
-      });
+  const handleRecordPayment = async (invoiceId: string, paymentAmount: number) => {
+    const success = await recordPayment(parseInt(invoiceId), paymentAmount);
+    if (success) {
+      setIsRecordPaymentOpen(false);
+      setSelectedInvoiceForPayment(null);
     }
   };
 
@@ -545,7 +373,20 @@ export function AccountReceivableTab() {
         },
       ];
     };
-  }, [invoices]);
+  }, []);
+
+  if (loading && invoices.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+        <TableSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
@@ -592,6 +433,11 @@ export function AccountReceivableTab() {
           minWidth="1200px"
           getRowId={(row) => row.id}
         />
+        {invoices.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No invoices found
+          </div>
+        )}
       </div>
 
       {/* Create Invoice Dialog */}

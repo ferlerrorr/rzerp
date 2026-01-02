@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { AppButtons } from "@/components/common/app-Buttons";
 import { AppSearch } from "@/components/common/app-Serach";
@@ -7,6 +7,7 @@ import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
 import { CreateInvoiceDialog } from "@/components/dialogs/create-invoice-dialog";
 import { RecordPaymentDialog } from "@/components/dialogs/record-payment-dialog";
 import { ReceivableInvoiceFormData } from "@/stores/receivableInvoice";
+import { useCustomerStore } from "@/stores/customer";
 import {
   DollarSign,
   AlertCircle,
@@ -194,7 +195,8 @@ const calculateInvoiceStatus = (
 
 // Transform ReceivableInvoiceFormData to Invoice
 const transformFormDataToInvoice = (
-  formData: ReceivableInvoiceFormData
+  formData: ReceivableInvoiceFormData,
+  customers: { id: number; company_name: string }[]
 ): Invoice => {
   const formatCurrency = (amount: number) => {
     return `₱${amount.toLocaleString("en-US", {
@@ -205,11 +207,16 @@ const transformFormDataToInvoice = (
 
   const amount = parseFloat(formData.amount) || 0;
   const status = calculateInvoiceStatus(formData.dueDate, amount, amount);
+  
+  // Find customer name from customerId
+  const customerId = parseInt(formData.customerId);
+  const customer = customers.find(c => c.id === customerId);
+  const customerName = customer?.company_name || `Customer ${customerId}`;
 
   return {
     id: getNextInvoiceId(),
     invoiceNumber: formData.invoiceNumber.trim(),
-    customer: formData.customer.trim(),
+    customer: customerName,
     description: formData.description.trim(),
     invoiceDate: formData.invoiceDate,
     dueDate: formData.dueDate,
@@ -327,6 +334,15 @@ export function AccountReceivablePage() {
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
     useState<Invoice | null>(null);
+  
+  const { customers, fetchCustomers } = useCustomerStore();
+
+  // Fetch customers on mount
+  useEffect(() => {
+    const { setFilters } = useCustomerStore.getState();
+    setFilters({ per_page: 1000 });
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   // Calculate account receivable counts dynamically
   const accountReceivableCounts = useMemo(() => {
@@ -416,7 +432,7 @@ export function AccountReceivablePage() {
   const handleInvoiceSubmit = (data: ReceivableInvoiceFormData) => {
     try {
       // Transform form data to invoice format
-      const newInvoice = transformFormDataToInvoice(data);
+      const newInvoice = transformFormDataToInvoice(data, customers);
 
       // Add new invoice to the beginning of the list
       const updatedInvoices = [newInvoice, ...invoices];

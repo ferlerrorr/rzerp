@@ -2078,6 +2078,2478 @@
 				}
 			],
 			"description": "Position management endpoints. All require authentication and appropriate HRIS permissions."
+		},
+		{
+			"name": "Accounts",
+			"item": [
+				{
+					"name": "List Accounts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('accounts');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/accounts?per_page=100",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "100",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "account_type",
+									"value": "",
+									"description": "Filter by account type (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all accounts (Chart of Accounts). Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/accounts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Account ID"
+								}
+							]
+						},
+						"description": "Get a specific account by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Account created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('account_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_type\": \"Asset\",\n    \"code\": \"1001\",\n    \"account_name\": \"Cash\",\n    \"debit\": \"0.00\",\n    \"credit\": \"0.00\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts"
+							]
+						},
+						"description": "Create a new account. Requires 'finance.create' permission. Account types: Asset, Liability, Equity, Revenue, Expense."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_type\": \"Asset\",\n    \"code\": \"1001\",\n    \"account_name\": \"Cash - Updated\",\n    \"debit\": \"1000.00\",\n    \"credit\": \"0.00\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/accounts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{account_id}}",
+									"description": "Account ID"
+								}
+							]
+						},
+						"description": "Update an account. Requires 'finance.update' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/accounts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{account_id}}",
+									"description": "Account ID"
+								}
+							]
+						},
+						"description": "Delete an account. Requires 'finance.delete' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Account management endpoints (Chart of Accounts). All require authentication and 'finance.view' permission."
+		},
+		{
+			"name": "Journal Entries",
+			"item": [
+				{
+					"name": "List Journal Entries",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('journal_entries');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: Draft, Posted (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all journal entries with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Journal Entry by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Journal Entry ID"
+								}
+							]
+						},
+						"description": "Get a specific journal entry by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Journal Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Journal entry created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('journal_entry_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"date\": \"2024-12-01\",\n    \"reference_number\": \"JE-2024-001\",\n    \"description\": \"Initial capital investment\",\n    \"debit_account_id\": 1,\n    \"credit_account_id\": 2,\n    \"amount\": \"100000.00\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries"
+							]
+						},
+						"description": "Create a new journal entry. Requires 'finance.create' permission. Debit and credit accounts must be different."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Journal Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"date\": \"2024-12-01\",\n    \"reference_number\": \"JE-2024-001\",\n    \"description\": \"Updated description\",\n    \"debit_account_id\": 1,\n    \"credit_account_id\": 2,\n    \"amount\": \"150000.00\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{journal_entry_id}}",
+									"description": "Journal Entry ID"
+								}
+							]
+						},
+						"description": "Update a journal entry. Requires 'finance.update' permission. Cannot update posted entries."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Journal Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{journal_entry_id}}",
+									"description": "Journal Entry ID"
+								}
+							]
+						},
+						"description": "Delete a journal entry. Requires 'finance.delete' permission. Cannot delete posted entries."
+					},
+					"response": []
+				},
+				{
+					"name": "Post Journal Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Journal entry posted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/journal-entries/:id/post",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"journal-entries",
+								":id",
+								"post"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{journal_entry_id}}",
+									"description": "Journal Entry ID"
+								}
+							]
+						},
+						"description": "Post a journal entry (change status from Draft to Posted). Requires 'finance.update' permission. Updates account balances."
+					},
+					"response": []
+				}
+			],
+			"description": "Journal Entry management endpoints. All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Budgets",
+			"item": [
+				{
+					"name": "List Budgets",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('budgets');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/budgets?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"budgets"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "period",
+									"value": "",
+									"description": "Filter by period: Monthly, Quarterly, Annual (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all budgets with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Budget by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/budgets/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"budgets",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Budget ID"
+								}
+							]
+						},
+						"description": "Get a specific budget by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Budget",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Budget created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('budget_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"category\": \"Marketing\",\n    \"budgeted_amount\": \"50000.00\",\n    \"period\": \"Monthly\",\n    \"description\": \"Monthly marketing budget\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/budgets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"budgets"
+							]
+						},
+						"description": "Create a new budget. Requires 'finance.create' permission. Period options: Monthly, Quarterly, Annual. Category can be custom."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Budget",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"category\": \"Marketing\",\n    \"budgeted_amount\": \"60000.00\",\n    \"period\": \"Monthly\",\n    \"description\": \"Updated monthly marketing budget\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/budgets/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"budgets",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{budget_id}}",
+									"description": "Budget ID"
+								}
+							]
+						},
+						"description": "Update a budget. Requires 'finance.update' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Budget",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/budgets/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"budgets",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{budget_id}}",
+									"description": "Budget ID"
+								}
+							]
+						},
+						"description": "Delete a budget. Requires 'finance.delete' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Budget management endpoints. All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Vendors",
+			"item": [
+				{
+					"name": "List Vendors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('vendors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/vendors?per_page=100",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"vendors"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "100",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: Active, Inactive (optional)",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "",
+									"description": "Filter by category (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all vendors with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vendor by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/vendors/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"vendors",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Vendor ID"
+								}
+							]
+						},
+						"description": "Get a specific vendor by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Vendor created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('vendor_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_name\": \"ABC Corporation\",\n    \"contact_person\": \"John Doe\",\n    \"category\": \"Electronics\",\n    \"email\": \"contact@abc.com\",\n    \"phone\": \"+63 917 123 4567\",\n    \"address\": \"123 Main St, Manila\",\n    \"tin\": \"123-456-789-000\",\n    \"payment_terms\": \"Net 30\",\n    \"status\": \"Active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/vendors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"vendors"
+							]
+						},
+						"description": "Create a new vendor. Requires 'finance.create' permission. Category can be 'Other' with custom value. Payment terms can be 'Custom' with custom value."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company_name\": \"ABC Corporation Updated\",\n    \"contact_person\": \"Jane Doe\",\n    \"category\": \"Electronics\",\n    \"email\": \"contact@abc.com\",\n    \"phone\": \"+63 917 123 4567\",\n    \"address\": \"123 Main St, Manila\",\n    \"tin\": \"123-456-789-000\",\n    \"payment_terms\": \"Net 45\",\n    \"status\": \"Active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/vendors/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"vendors",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{vendor_id}}",
+									"description": "Vendor ID"
+								}
+							]
+						},
+						"description": "Update a vendor. Requires 'finance.update' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/vendors/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"vendors",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{vendor_id}}",
+									"description": "Vendor ID"
+								}
+							]
+						},
+						"description": "Delete a vendor. Requires 'finance.delete' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Vendor management endpoints. All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Invoices (Accounts Payable)",
+			"item": [
+				{
+					"name": "List Invoices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('invoices');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/invoices?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: Pending, Approved, Paid, Overdue (optional)",
+									"disabled": true
+								},
+								{
+									"key": "vendor_id",
+									"value": "",
+									"description": "Filter by vendor ID (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all invoices (Accounts Payable) with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Get a specific invoice by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Invoice created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('invoice_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_number\": \"INV-2024-001\",\n    \"vendor_id\": 1,\n    \"description\": \"Office supplies purchase\",\n    \"invoice_date\": \"2024-12-01\",\n    \"due_date\": \"2024-12-31\",\n    \"amount\": \"50000.00\",\n    \"category\": \"Office Supplies\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/invoices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices"
+							]
+						},
+						"description": "Create a new invoice (Accounts Payable). Requires 'finance.create' permission. Category can be 'Other' with custom value. Updates vendor totals automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_number\": \"INV-2024-001\",\n    \"vendor_id\": 1,\n    \"description\": \"Updated description\",\n    \"invoice_date\": \"2024-12-01\",\n    \"due_date\": \"2024-12-31\",\n    \"amount\": \"60000.00\",\n    \"category\": \"Office Supplies\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{invoice_id}}",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Update an invoice. Requires 'finance.update' permission. Updates vendor totals automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{invoice_id}}",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Delete an invoice. Requires 'finance.delete' permission. Updates vendor totals automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Invoice approved successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/invoices/:id/approve",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices",
+								":id",
+								"approve"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{invoice_id}}",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Approve an invoice (change status from Pending to Approved). Requires 'finance.update' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Invoice paid successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/invoices/:id/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"invoices",
+								":id",
+								"pay"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{invoice_id}}",
+									"description": "Invoice ID"
+								}
+							]
+						},
+						"description": "Mark an invoice as paid (change status to Paid). Requires 'finance.update' permission. Updates vendor outstanding balance."
+					},
+					"response": []
+				}
+			],
+			"description": "Invoice management endpoints (Accounts Payable). All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Customers",
+			"item": [
+				{
+					"name": "List Customers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('customers');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/customers?per_page=100",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"customers"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "100",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: Active, Inactive (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all customers with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/customers/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"customers",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Customer ID"
+								}
+							]
+						},
+						"description": "Get a specific customer by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Customer management endpoints. All require authentication and 'finance.view' permission."
+		},
+		{
+			"name": "Receivable Invoices",
+			"item": [
+				{
+					"name": "List Receivable Invoices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('receivable_invoices');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/receivable-invoices?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"receivable-invoices"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: Pending, Paid, Overdue, Partial (optional)",
+									"disabled": true
+								},
+								{
+									"key": "customer_id",
+									"value": "",
+									"description": "Filter by customer ID (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all receivable invoices (Accounts Receivable) with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Receivable Invoice by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/receivable-invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"receivable-invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Receivable Invoice ID"
+								}
+							]
+						},
+						"description": "Get a specific receivable invoice by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Receivable Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Receivable invoice created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('receivable_invoice_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_number\": \"INV-REC-2024-001\",\n    \"customer_id\": 1,\n    \"description\": \"Software licensing services\",\n    \"invoice_date\": \"2024-12-01\",\n    \"due_date\": \"2024-12-31\",\n    \"amount\": \"100000.00\",\n    \"payment_terms\": \"Net 30\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/receivable-invoices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"receivable-invoices"
+							]
+						},
+						"description": "Create a new receivable invoice (Accounts Receivable). Requires 'finance.create' permission. Payment terms can be 'Custom' with custom value. Updates customer totals automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Receivable Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_number\": \"INV-REC-2024-001\",\n    \"customer_id\": 1,\n    \"description\": \"Updated description\",\n    \"invoice_date\": \"2024-12-01\",\n    \"due_date\": \"2024-12-31\",\n    \"amount\": \"120000.00\",\n    \"payment_terms\": \"Net 30\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/receivable-invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"receivable-invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{receivable_invoice_id}}",
+									"description": "Receivable Invoice ID"
+								}
+							]
+						},
+						"description": "Update a receivable invoice. Requires 'finance.update' permission. Updates customer totals automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Receivable Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/receivable-invoices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"receivable-invoices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{receivable_invoice_id}}",
+									"description": "Receivable Invoice ID"
+								}
+							]
+						},
+						"description": "Delete a receivable invoice. Requires 'finance.delete' permission. Updates customer totals automatically."
+					},
+					"response": []
+				}
+			],
+			"description": "Receivable Invoice management endpoints (Accounts Receivable). All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "Record Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Payment recorded successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"receivable_invoice_id\": 1,\n    \"amount\": \"50000.00\",\n    \"payment_date\": \"2024-12-15\",\n    \"payment_method\": \"Bank Transfer\",\n    \"notes\": \"Partial payment\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments"
+							]
+						},
+						"description": "Record a payment for a receivable invoice. Requires 'finance.create' permission. Updates invoice balance and status automatically. Updates customer totals."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Payments by Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('payments');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/payments/invoice/:invoiceId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payments",
+								"invoice",
+								":invoiceId"
+							],
+							"variable": [
+								{
+									"key": "invoiceId",
+									"value": "{{receivable_invoice_id}}",
+									"description": "Receivable Invoice ID"
+								}
+							]
+						},
+						"description": "Get all payments for a specific receivable invoice. Requires 'finance.view' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Payment management endpoints for receivable invoices. All require authentication and appropriate finance permissions."
+		},
+		{
+			"name": "Purchase Orders",
+			"item": [
+				{
+					"name": "List Purchase Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.data).to.have.property('purchase_orders');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Number of items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: pending, approved, ordered, received (optional)",
+									"disabled": true
+								},
+								{
+									"key": "vendor_id",
+									"value": "",
+									"description": "Filter by vendor ID (optional)",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search term (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get list of all purchase orders with pagination. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Purchase Order by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Purchase Order ID"
+								}
+							]
+						},
+						"description": "Get a specific purchase order by ID. Requires 'finance.view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Purchase Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Purchase order created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('purchase_order_id', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"po_number\": \"PO-2024-001\",\n    \"vendor_id\": 1,\n    \"vendor_name\": \"ABC Corporation\",\n    \"requested_by\": \"John Doe\",\n    \"order_date\": \"2024-12-01\",\n    \"expected_delivery\": \"2024-12-15\",\n    \"status\": \"pending\",\n    \"notes\": \"Urgent order\",\n    \"items\": [\n        {\n            \"product_name\": \"Laptop\",\n            \"quantity\": 5,\n            \"unit_price\": \"50000.00\"\n        },\n        {\n            \"product_name\": \"Mouse\",\n            \"quantity\": 10,\n            \"unit_price\": \"500.00\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders"
+							]
+						},
+						"description": "Create a new purchase order. Requires 'finance.create' permission. PO number is optional (auto-generated if not provided). Items array is required with at least one item."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Purchase Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"po_number\": \"PO-2024-001\",\n    \"vendor_id\": 1,\n    \"vendor_name\": \"ABC Corporation\",\n    \"requested_by\": \"Jane Doe\",\n    \"order_date\": \"2024-12-01\",\n    \"expected_delivery\": \"2024-12-20\",\n    \"status\": \"pending\",\n    \"notes\": \"Updated notes\",\n    \"items\": [\n        {\n            \"product_name\": \"Laptop\",\n            \"quantity\": 6,\n            \"unit_price\": \"50000.00\"\n        },\n        {\n            \"product_name\": \"Mouse\",\n            \"quantity\": 12,\n            \"unit_price\": \"500.00\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{purchase_order_id}}",
+									"description": "Purchase Order ID"
+								}
+							]
+						},
+						"description": "Update a purchase order. Requires 'finance.update' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Purchase Order Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Purchase order status updated successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"approved\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders/:id/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{purchase_order_id}}",
+									"description": "Purchase Order ID"
+								}
+							]
+						},
+						"description": "Update purchase order status. Requires 'finance.update' permission. Status options: pending, approved, ordered, received."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Purchase Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/purchase-orders/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"purchase-orders",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{purchase_order_id}}",
+									"description": "Purchase Order ID"
+								}
+							]
+						},
+						"description": "Delete a purchase order. Requires 'finance.delete' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "Purchase Order management endpoints. All require authentication and appropriate finance permissions."
 		}
 	],
 	"event": [
@@ -2344,6 +4816,78 @@
 			"type": "string",
 			"description": {
 				"content": "Role ID for testing",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "account_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Account ID for testing (auto-populated when creating account)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "journal_entry_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Journal Entry ID for testing (auto-populated when creating journal entry)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "budget_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Budget ID for testing (auto-populated when creating budget)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "vendor_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Vendor ID for testing (auto-populated when creating vendor)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "invoice_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Invoice ID for testing (auto-populated when creating invoice)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "customer_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Customer ID for testing",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "receivable_invoice_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Receivable Invoice ID for testing (auto-populated when creating receivable invoice)",
+				"type": "text/plain"
+			}
+		},
+		{
+			"key": "purchase_order_id",
+			"value": "",
+			"type": "string",
+			"description": {
+				"content": "Purchase Order ID for testing (auto-populated when creating purchase order)",
 				"type": "text/plain"
 			}
 		}

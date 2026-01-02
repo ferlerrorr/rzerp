@@ -19,7 +19,7 @@ export interface PurchaseOrderItem {
 
 export interface PurchaseOrderCardProps {
   poNumber: string;
-  status: "approved" | "ordered" | "pending";
+  status: "approved" | "ordered" | "pending" | "received";
   vendor: string;
   requestedBy: string;
   orderDate: string;
@@ -40,6 +40,7 @@ const statusBadgeMap = {
   approved: "info",
   ordered: "secondary",
   pending: "pending",
+  received: "success",
 } as const;
 
 export function PurchaseOrderCard({
@@ -106,6 +107,29 @@ export function PurchaseOrderCard({
               <span className="hidden sm:inline">Mark as Received</span>
               <span className="sm:hidden">Received</span>
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onViewDetails}
+              className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 h-7 sm:h-8 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors duration-200 flex items-center justify-center"
+            >
+              <span className="hidden sm:inline">View Details</span>
+              <span className="sm:hidden">View</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onPrint}
+              className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 h-7 sm:h-8 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors duration-200 flex items-center justify-center"
+            >
+              <Printer className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden sm:inline">Print</span>
+            </Button>
+          </>
+        );
+      case "received":
+        return (
+          <>
             <Button
               size="sm"
               variant="outline"
