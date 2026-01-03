@@ -7,6 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { House } from "lucide-react";
 
 export function DynamicBreadcrumb() {
   const location = useLocation();
@@ -25,10 +26,10 @@ export function DynamicBreadcrumb() {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link to="/dashboard">Home</Link>
+            <Link to="/dashboard"><House className="h-4 w-4 text-black" /></Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {pathnames.length > 0 && <BreadcrumbSeparator />}
+        {pathnames.length > 0 && <BreadcrumbSeparator>/</BreadcrumbSeparator>}
         {pathnames.map((value, index) => {
           const to = `/${pathnames.slice(0, index + 1).join("/")}`;
           const isLast = index === pathnames.length - 1;
@@ -36,13 +37,13 @@ export function DynamicBreadcrumb() {
           return (
             <BreadcrumbItem key={to}>
               {isLast ? (
-                <BreadcrumbPage>{getBreadcrumbName(value)}</BreadcrumbPage>
+                <BreadcrumbPage className="text-sm font-medium text-[#767676]">{getBreadcrumbName(value)}</BreadcrumbPage>
               ) : (
                 <>
                   <BreadcrumbLink asChild>
                     <Link to={to}>{getBreadcrumbName(value)}</Link>
                   </BreadcrumbLink>
-                  <BreadcrumbSeparator />
+                  <BreadcrumbSeparator>/</BreadcrumbSeparator>
                 </>
               )}
             </BreadcrumbItem>

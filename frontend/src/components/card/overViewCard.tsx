@@ -70,7 +70,7 @@ export function OverViewCard({
   return (
     <Card
       className={cn(
-        "w-auto p-4 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2",
+        "w-auto p-3 rounded-2xl border border-[#EFEFEF] bg-white flex flex-col gap-2",
         className
       )}
       role="article"
@@ -79,12 +79,12 @@ export function OverViewCard({
       <CardHeader className="flex flex-row items-center justify-between p-0 space-y-0">
         <Heading
           level={2}
-          className="text-sm font-medium text-[#767676] leading-[1.22]"
+          className="text-sm font-medium text-[#767676] "
         >
           {title}
         </Heading>
-        <div className="rounded-full bg-[#F4F4F5] p-3">
-          <Icon className="h-5 w-5" aria-hidden="true" />
+        <div className="rounded-full bg-[#F4F4F5] p-2">
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
       </CardHeader>
       <Section aria-label={`${title} count`} className="p-0">
@@ -99,7 +99,7 @@ export function OverViewCard({
       </Section>
       {trend && (
         <CardContent
-          className="flex flex-col items-start p-0 gap-0"
+          className="flex flex-row gap-2"
           role="status"
           aria-label={`Change ${trend.label}`}
         >
