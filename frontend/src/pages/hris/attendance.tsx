@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from "react";
 import { OverViewCard } from "@/components/card/overViewCard";
 import {
   UserCheck,
@@ -14,6 +15,10 @@ import {
   RevenueChart,
   RevenueChartData,
 } from "@/components/charts/revenueChart";
+import { useAttendanceStore, AttendanceFromAPI } from "@/stores/attendance";
+import { AppButtons } from "@/components/common/app-Buttons";
+import { AppSearch } from "@/components/common/app-Serach";
+import { useSearchStore } from "@/stores/search";
 
 interface AttendanceData {
   present: number;
@@ -29,14 +34,6 @@ interface AttendanceCardConfig {
   iconBgColor: "green" | "orange";
   valueColor: "green" | "brown" | "red" | "orange";
 }
-
-// Sample data - This would typically come from an API/database
-const attendanceData: AttendanceData = {
-  present: 85,
-  on_leave: 8,
-  absent: 5,
-  late: 12,
-};
 
 // Card configuration - maps to dummy data
 const attendanceCardConfig: AttendanceCardConfig[] = [
@@ -70,118 +67,30 @@ const attendanceCardConfig: AttendanceCardConfig[] = [
   },
 ];
 
-// Daily Time Record (DTR) interface
-interface DailyTimeRecord {
-  id: string;
-  employee: string;
-  timeIn: string;
-  timeOut: string;
-  hoursWorked: string;
-  status: string;
-}
+// Transform AttendanceFromAPI to display format
+const transformAttendance = (attendance: AttendanceFromAPI) => {
+  const formatTime = (time: string | null) => {
+    if (!time) return "-";
+    const date = new Date(time);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
-// Sample DTR data - This would typically come from an API/database
-const dailyTimeRecords: DailyTimeRecord[] = [
-  {
-    id: "DTR001",
-    employee: "John Doe",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR002",
-    employee: "Jane Smith",
-    timeIn: "08:15 AM",
-    timeOut: "05:15 PM",
-    hoursWorked: "9.0",
-    status: "Late",
-  },
-  {
-    id: "DTR003",
-    employee: "Mike Johnson",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR004",
-    employee: "Sarah Williams",
-    timeIn: "-",
-    timeOut: "-",
-    hoursWorked: "-",
-    status: "Absent",
-  },
-  {
-    id: "DTR005",
-    employee: "David Brown",
-    timeIn: "-",
-    timeOut: "-",
-    hoursWorked: "-",
-    status: "On Leave",
-  },
-  {
-    id: "DTR006",
-    employee: "Emily Davis",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR007",
-    employee: "Robert Wilson",
-    timeIn: "08:30 AM",
-    timeOut: "05:30 PM",
-    hoursWorked: "9.0",
-    status: "Late",
-  },
-  {
-    id: "DTR008",
-    employee: "Lisa Anderson",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR009",
-    employee: "Michael Chen",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR010",
-    employee: "Jessica Taylor",
-    timeIn: "-",
-    timeOut: "-",
-    hoursWorked: "-",
-    status: "Absent",
-  },
-  {
-    id: "DTR011",
-    employee: "Christopher Lee",
-    timeIn: "08:00 AM",
-    timeOut: "05:00 PM",
-    hoursWorked: "9.0",
-    status: "Present",
-  },
-  {
-    id: "DTR012",
-    employee: "Amanda White",
-    timeIn: "08:20 AM",
-    timeOut: "05:20 PM",
-    hoursWorked: "9.0",
-    status: "Late",
-  },
-];
+  return {
+    id: attendance.id.toString(),
+    employee: attendance.employee?.name || `Employee ${attendance.employee_id}`,
+    timeIn: formatTime(attendance.time_in),
+    timeOut: formatTime(attendance.time_out),
+    hoursWorked: attendance.total_hours > 0 ? attendance.total_hours.toFixed(1) : "-",
+    status: attendance.status.charAt(0).toUpperCase() + attendance.status.slice(1),
+  };
+};
 
 // Table column definitions
-const dtrColumns: ColumnDef<DailyTimeRecord>[] = [
+const dtrColumns: ColumnDef<ReturnType<typeof transformAttendance>>[] = [
   {
     header: "Employee",
     accessor: "employee",
@@ -213,7 +122,7 @@ const dtrColumns: ColumnDef<DailyTimeRecord>[] = [
       Present: "success",
       Late: "warning",
       Absent: "error",
-      "On Leave": "pending",
+      "On leave": "pending",
     },
     className: "text-center",
     headerClassName: "text-center",
@@ -221,13 +130,12 @@ const dtrColumns: ColumnDef<DailyTimeRecord>[] = [
 ];
 
 // Table action items
-const dtrActions: ActionItem<DailyTimeRecord>[] = [
+const dtrActions: ActionItem<ReturnType<typeof transformAttendance>>[] = [
   {
     label: "View",
     icon: Eye,
     onClick: (record) => {
       console.log("View DTR:", record);
-      // Handle view action
     },
   },
   {
@@ -235,7 +143,6 @@ const dtrActions: ActionItem<DailyTimeRecord>[] = [
     icon: Edit,
     onClick: (record) => {
       console.log("Edit DTR:", record);
-      // Handle edit action
     },
   },
   {
@@ -243,7 +150,6 @@ const dtrActions: ActionItem<DailyTimeRecord>[] = [
     icon: Trash2,
     onClick: (record) => {
       console.log("Delete DTR:", record);
-      // Handle delete action
     },
     variant: "destructive",
   },
@@ -306,14 +212,81 @@ const attendanceChartConfig = {
 } as const;
 
 export function AttendanceTab() {
+  const {
+    attendances,
+    loading,
+    error,
+    fetchAttendances,
+    setFilters,
+  } = useAttendanceStore();
+  const { query: searchQuery } = useSearchStore();
+
+  useEffect(() => {
+    fetchAttendances();
+  }, [fetchAttendances]);
+
+  useEffect(() => {
+    if (searchQuery !== undefined) {
+      setFilters({ search: searchQuery || undefined });
+      fetchAttendances();
+    }
+  }, [searchQuery, setFilters, fetchAttendances]);
+
+  // Calculate attendance data from API
+  const attendanceData = useMemo(() => {
+    const present = attendances.filter((a) => a.status === "present").length;
+    const onLeave = attendances.filter((a) => a.status === "on_leave").length;
+    const absent = attendances.filter((a) => a.status === "absent").length;
+    const late = attendances.filter((a) => a.status === "late").length;
+
+    return {
+      present,
+      on_leave: onLeave,
+      absent,
+      late,
+    };
+  }, [attendances]);
+
+  // Transform attendances for table
+  const dailyTimeRecords = useMemo(() => {
+    return attendances.map(transformAttendance);
+  }, [attendances]);
+
+  // Calculate chart data (simplified - would need date grouping)
+  const attendanceChartData: RevenueChartData[] = useMemo(() => {
+    // This would need proper date grouping in a real implementation
+    return [
+      {
+        month: "January",
+        averageAttendance: attendanceData.present,
+        totalHoursWorked: attendances.reduce((sum, a) => sum + a.total_hours, 0),
+        overtimeHours: attendances.reduce((sum, a) => sum + a.overtime_hours, 0),
+      },
+    ];
+  }, [attendances, attendanceData]);
+
   return (
     <div className="flex flex-col gap-4 px-2 sm:px-4 md:px-6">
+      {error && (
+        <div className="bg-destructive/15 text-destructive border border-destructive/50 rounded-md p-4">
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-row sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mt-4">
+        <div className="flex flex-row sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center flex-1 w-full sm:w-auto">
+          <div className="flex-1 w-full sm:max-w-[20rem] min-w-0">
+            <AppSearch />
+          </div>
+        </div>
+      </div>
+
       <div className="w-full">
         <RevenueChart
           data={attendanceChartData}
           config={attendanceChartConfig}
           title="Attendance Overview"
-          value="85%"
+          value={`${attendanceData.present}%`}
           xAxisKey="month"
           xAxisFormatter={(value) => value.slice(0, 3)}
           height="200px"
@@ -334,15 +307,21 @@ export function AttendanceTab() {
         ))}
       </div>
       <div className="w-full">
-        <AppTable
-          data={dailyTimeRecords}
-          columns={dtrColumns}
-          actions={dtrActions}
-          itemsPerPage={5}
-          caption="Daily Time Record (DTR)"
-          minWidth="800px"
-          getRowId={(row) => row.id}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Loading attendances...</p>
+          </div>
+        ) : (
+          <AppTable
+            data={dailyTimeRecords}
+            columns={dtrColumns}
+            actions={dtrActions}
+            itemsPerPage={5}
+            caption="Daily Time Record (DTR)"
+            minWidth="800px"
+            getRowId={(row) => row.id}
+          />
+        )}
       </div>
     </div>
   );

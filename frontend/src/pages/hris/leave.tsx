@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { AppButtons } from "@/components/common/app-Buttons";
 import { SimpleCard } from "@/components/card/simpleCard";
@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import { AppTable, ColumnDef, ActionItem } from "@/components/table/appTable";
 import { LeaveRequestDialog } from "@/components/dialogs/leave-request-dialog";
-import { LeaveRequestFormData } from "@/stores/leave";
+import {
+  useLeaveRequestStore,
+  LeaveRequestFormData,
+  LeaveRequestFromAPI,
+  LeaveBalanceFromAPI,
+} from "@/stores/leave";
+import { useEmployeeStore } from "@/stores/employee";
 
 interface LeaveData {
   pending_request: number;
@@ -74,212 +80,21 @@ const leaveCardConfig: LeaveCardConfig[] = [
   },
 ];
 
-// Leave Record interface
-interface LeaveRecord {
-  id: string;
-  employee: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: string;
-}
-
-// Default leave records data - This would typically come from an API/database
-const defaultLeaveRecords: LeaveRecord[] = [
-  {
-    id: "LEAVE001",
-    employee: "John Doe",
-    leaveType: "Vacation",
-    startDate: "2024-01-15",
-    endDate: "2024-01-20",
-    days: 6,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE002",
-    employee: "Jane Smith",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-10",
-    endDate: "2024-01-12",
-    days: 3,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE003",
-    employee: "Mike Johnson",
-    leaveType: "Personal",
-    startDate: "2024-01-18",
-    endDate: "2024-01-19",
-    days: 2,
-    status: "Pending",
-  },
-  {
-    id: "LEAVE004",
-    employee: "Sarah Williams",
-    leaveType: "Vacation",
-    startDate: "2024-01-22",
-    endDate: "2024-01-26",
-    days: 5,
-    status: "Pending",
-  },
-  {
-    id: "LEAVE005",
-    employee: "David Brown",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-08",
-    endDate: "2024-01-09",
-    days: 2,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE006",
-    employee: "Emily Davis",
-    leaveType: "Maternity",
-    startDate: "2024-01-01",
-    endDate: "2024-03-31",
-    days: 90,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE007",
-    employee: "Robert Wilson",
-    leaveType: "Vacation",
-    startDate: "2024-01-25",
-    endDate: "2024-01-30",
-    days: 6,
-    status: "Pending",
-  },
-  {
-    id: "LEAVE008",
-    employee: "Lisa Anderson",
-    leaveType: "Personal",
-    startDate: "2024-01-14",
-    endDate: "2024-01-14",
-    days: 1,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE009",
-    employee: "Michael Chen",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-16",
-    endDate: "2024-01-17",
-    days: 2,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE010",
-    employee: "Jessica Taylor",
-    leaveType: "Vacation",
-    startDate: "2024-01-28",
-    endDate: "2024-02-02",
-    days: 6,
-    status: "Pending",
-  },
-  {
-    id: "LEAVE011",
-    employee: "Christopher Lee",
-    leaveType: "Personal",
-    startDate: "2024-01-12",
-    endDate: "2024-01-13",
-    days: 2,
-    status: "Approved",
-  },
-  {
-    id: "LEAVE012",
-    employee: "Amanda White",
-    leaveType: "Sick Leave",
-    startDate: "2024-01-20",
-    endDate: "2024-01-21",
-    days: 2,
-    status: "Pending",
-  },
-];
-
-// LocalStorage keys
-const LEAVE_RECORDS_STORAGE_KEY = "rzerp_leave_records";
-const LEAVE_COUNTER_KEY = "rzerp_leave_counter";
-
-// Helper functions for localStorage
-const loadLeaveRecordsFromStorage = (): LeaveRecord[] => {
-  try {
-    const stored = localStorage.getItem(LEAVE_RECORDS_STORAGE_KEY);
-    if (stored) {
-      const records = JSON.parse(stored);
-      // Sort by leave ID when loading from storage (after refresh)
-      return sortLeaveRecordsById(records);
-    }
-    // Initialize with default records if no data exists
-    const sortedDefault = sortLeaveRecordsById(defaultLeaveRecords);
-    saveLeaveRecordsToStorage(sortedDefault);
-    // Initialize counter to 12 (since we have 12 default records)
-    if (!localStorage.getItem(LEAVE_COUNTER_KEY)) {
-      localStorage.setItem(LEAVE_COUNTER_KEY, "12");
-    }
-    return sortedDefault;
-  } catch (error) {
-    console.error("Error loading leave records from localStorage:", error);
-    return sortLeaveRecordsById(defaultLeaveRecords);
-  }
-};
-
-// Sort leave records by ID (LEAVE001, LEAVE002, etc.)
-const sortLeaveRecordsById = (records: LeaveRecord[]): LeaveRecord[] => {
-  return [...records].sort((a, b) => {
-    // Extract numeric part from ID (e.g., "LEAVE001" -> 1)
-    const numA = parseInt(a.id.replace("LEAVE", ""), 10);
-    const numB = parseInt(b.id.replace("LEAVE", ""), 10);
-    return numA - numB;
-  });
-};
-
-const saveLeaveRecordsToStorage = (records: LeaveRecord[]) => {
-  try {
-    localStorage.setItem(LEAVE_RECORDS_STORAGE_KEY, JSON.stringify(records));
-  } catch (error) {
-    console.error("Error saving leave records to localStorage:", error);
-  }
-};
-
-const getNextLeaveId = (): string => {
-  try {
-    const counter = parseInt(
-      localStorage.getItem(LEAVE_COUNTER_KEY) || "12",
-      10
-    );
-    const nextCounter = counter + 1;
-    localStorage.setItem(LEAVE_COUNTER_KEY, nextCounter.toString());
-    return `LEAVE${nextCounter.toString().padStart(3, "0")}`;
-  } catch (error) {
-    console.error("Error getting next leave ID:", error);
-    return `LEAVE${Date.now()}`;
-  }
-};
-
-// Transform LeaveRequestFormData to LeaveRecord
-const transformFormDataToLeaveRecord = (
-  formData: LeaveRequestFormData
-): LeaveRecord => {
-  // Calculate days between start and end date
-  const start = new Date(formData.startDate);
-  const end = new Date(formData.endDate);
-  const days =
-    Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
+// Transform LeaveRequestFromAPI to display format
+const transformLeaveRequest = (request: LeaveRequestFromAPI) => {
   return {
-    id: getNextLeaveId(),
-    employee: formData.employeeName,
-    leaveType: formData.leaveType,
-    startDate: formData.startDate,
-    endDate: formData.endDate,
-    days: days,
-    status: "Pending",
+    id: request.id.toString(),
+    employee: request.employee?.name || `Employee ${request.employee_id}`,
+    leaveType: request.leave_type?.name || "Unknown",
+    startDate: request.start_date,
+    endDate: request.end_date,
+    days: request.total_days,
+    status: request.status.charAt(0).toUpperCase() + request.status.slice(1),
   };
 };
 
 // Table column definitions
-const leaveColumns: ColumnDef<LeaveRecord>[] = [
+const leaveColumns: ColumnDef<ReturnType<typeof transformLeaveRequest>>[] = [
   {
     header: "Employee",
     accessor: "employee",
@@ -333,98 +148,77 @@ const leaveColumns: ColumnDef<LeaveRecord>[] = [
       Approved: "success",
       Pending: "pending",
       Rejected: "error",
+      Cancelled: "warning",
     },
     className: "text-center",
     headerClassName: "text-center",
   },
 ];
 
-// Table action items - will be defined inside component to use handlers
-
-// Leave type progress data - This would typically come from an API/database
-interface LeaveTypeProgress {
-  title: string;
-  used: number;
-  balance: number;
-  usedColor?:
-    | "blue"
-    | "green"
-    | "purple"
-    | "orange"
-    | "pink"
-    | "indigo"
-    | "teal"
-    | "yellow"
-    | "red"
-    | "gray";
-  balanceColor?: "gray" | "muted";
-}
-
-const leaveTypeProgress: LeaveTypeProgress[] = [
-  {
-    title: "Vacation Leave",
-    used: 8,
-    balance: 7,
-    usedColor: "blue",
-    balanceColor: "gray",
-  },
-  {
-    title: "Sick Leave",
-    used: 5,
-    balance: 10,
-    usedColor: "red",
-    balanceColor: "gray",
-  },
-  {
-    title: "Personal Leave",
-    used: 3,
-    balance: 2,
-    usedColor: "purple",
-    balanceColor: "gray",
-  },
-  {
-    title: "Maternity Leave",
-    used: 90,
-    balance: 0,
-    usedColor: "pink",
-    balanceColor: "gray",
-  },
-];
+// Transform leave balances to progress format
+const transformLeaveBalances = (balances: LeaveBalanceFromAPI[]) => {
+  const colors = ["blue", "green", "purple", "orange", "pink", "indigo", "teal", "yellow", "red"];
+  return balances.map((balance, index) => ({
+    title: balance.leave_type?.name || "Unknown",
+    used: balance.used_days,
+    balance: balance.available_days,
+    usedColor: (colors[index % colors.length] || "blue") as any,
+    balanceColor: "gray" as const,
+  }));
+};
 
 export function LeaveTab() {
-  // Load leave records from localStorage on mount
-  const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>(() =>
-    loadLeaveRecordsFromStorage()
-  );
-
+  const {
+    leaveRequests,
+    leaveTypes,
+    leaveBalances,
+    loading,
+    error,
+    fetchLeaveRequests,
+    fetchLeaveTypes,
+    createLeaveRequest,
+    approveLeaveRequest,
+    rejectLeaveRequest,
+  } = useLeaveRequestStore();
+  const { employees, fetchEmployees } = useEmployeeStore();
   const [isLeaveRequestOpen, setIsLeaveRequestOpen] = useState(false);
 
-  // Get unique employee names from leave records
-  const uniqueEmployees = useMemo(() => {
-    return Array.from(
-      new Set(leaveRecords.map((record) => record.employee))
-    ).sort();
-  }, [leaveRecords]);
+  useEffect(() => {
+    fetchLeaveRequests();
+    fetchLeaveTypes();
+    fetchEmployees();
+  }, [fetchLeaveRequests, fetchLeaveTypes, fetchEmployees]);
+
+  // Get employee options for leave request dialog
+  const employeeOptions = useMemo(() => {
+    return employees.map((emp) => ({
+      id: emp.id.toString(),
+      name: `${emp.first_name} ${emp.last_name}`,
+    }));
+  }, [employees]);
 
   // Calculate leave data for cards
   const leaveData = useMemo(() => {
-    const pendingRequest = leaveRecords.filter(
-      (record) => record.status === "Pending"
+    const pendingRequest = leaveRequests.filter(
+      (r) => r.status === "pending"
     ).length;
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    const approveThisMonth = leaveRecords.filter((record) => {
-      const recordDate = new Date(record.startDate);
+    const approveThisMonth = leaveRequests.filter((r) => {
+      const recordDate = new Date(r.start_date);
       return (
-        record.status === "Approved" &&
+        r.status === "approved" &&
         recordDate.getMonth() === currentMonth &&
         recordDate.getFullYear() === currentYear
       );
     }).length;
-    const totalDaysUsed = leaveRecords
-      .filter((record) => record.status === "Approved")
-      .reduce((sum, record) => sum + record.days, 0);
-    const availableLeaveCredits = 15; // This could be calculated based on employee leave balance
+    const totalDaysUsed = leaveRequests
+      .filter((r) => r.status === "approved")
+      .reduce((sum, r) => sum + r.total_days, 0);
+    const availableLeaveCredits = leaveBalances.reduce(
+      (sum, b) => sum + b.available_days,
+      0
+    );
 
     return {
       pending_request: pendingRequest,
@@ -432,111 +226,106 @@ export function LeaveTab() {
       total_days_used: totalDaysUsed,
       available_leave_credits: availableLeaveCredits,
     };
-  }, [leaveRecords]);
+  }, [leaveRequests, leaveBalances]);
+
+  // Transform leave requests for table
+  const leaveRecords = useMemo(() => {
+    return leaveRequests.map(transformLeaveRequest);
+  }, [leaveRequests]);
+
+  // Transform leave balances for progress cards
+  const leaveTypeProgress = useMemo(() => {
+    return transformLeaveBalances(leaveBalances);
+  }, [leaveBalances]);
 
   // Handle leave request submission
-  const handleLeaveRequestSubmit = (data: LeaveRequestFormData) => {
-    try {
-      // Transform form data to leave record format
-      const newLeaveRecord = transformFormDataToLeaveRecord(data);
+  const handleLeaveRequestSubmit = async (data: LeaveRequestFormData) => {
+    // Transform form data to API format
+    // Find employee ID from name
+    const employee = employees.find(
+      (emp) => `${emp.first_name} ${emp.last_name}` === data.employeeName
+    );
+    // Find leave type ID from name
+    const leaveType = leaveTypes.find((lt) => lt.name === data.leaveType);
 
-      // Add new leave record to the beginning of the list (so it appears at the top)
-      const updatedRecords = [newLeaveRecord, ...leaveRecords];
+    if (!employee) {
+      toast.error("Invalid Employee", {
+        description: "Please select a valid employee.",
+        duration: 4000,
+      });
+      return;
+    }
 
-      // Save to localStorage
-      saveLeaveRecordsToStorage(updatedRecords);
+    if (!leaveType) {
+      toast.error("Invalid Leave Type", {
+        description: "Please select a valid leave type.",
+        duration: 4000,
+      });
+      return;
+    }
 
-      // Update state to trigger re-render
-      setLeaveRecords(updatedRecords);
+    const apiData = {
+      employee_id: parseInt(employee.id),
+      leave_type_id: leaveType.id,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      reason: data.reason || null,
+    };
 
-      // Show success toast
+    const result = await createLeaveRequest(apiData);
+    if (result) {
       toast.success("Leave Request Submitted", {
-        description: `Leave request for ${data.employeeName} has been submitted successfully.`,
+        description: "Leave request has been submitted successfully.",
         duration: 3000,
       });
-
-      console.log("Leave request added successfully:", newLeaveRecord);
-    } catch (error) {
-      console.error("Error submitting leave request:", error);
-      // Show error toast
+      setIsLeaveRequestOpen(false);
+    } else {
       toast.error("Failed to Submit Leave Request", {
-        description:
-          "An error occurred while submitting the leave request. Please try again.",
+        description: "An error occurred while submitting the leave request.",
         duration: 4000,
       });
     }
   };
 
   // Handle approve leave request
-  const handleApproveLeave = (record: LeaveRecord) => {
-    try {
-      const updatedRecords = leaveRecords.map((r) =>
-        r.id === record.id ? { ...r, status: "Approved" } : r
-      );
-
-      // Save to localStorage
-      saveLeaveRecordsToStorage(updatedRecords);
-
-      // Update state to trigger re-render
-      setLeaveRecords(updatedRecords);
-
-      // Show success toast
+  const handleApproveLeave = async (record: ReturnType<typeof transformLeaveRequest>) => {
+    const result = await approveLeaveRequest(parseInt(record.id));
+    if (result) {
       toast.success("Leave Request Approved", {
-        description: `Leave request ${record.id} for ${record.employee} has been approved.`,
+        description: `Leave request for ${record.employee} has been approved.`,
         duration: 3000,
       });
-
-      console.log("Leave request approved:", record.id);
-    } catch (error) {
-      console.error("Error approving leave request:", error);
-      // Show error toast
+    } else {
       toast.error("Failed to Approve Leave Request", {
-        description:
-          "An error occurred while approving the leave request. Please try again.",
+        description: "An error occurred while approving the leave request.",
         duration: 4000,
       });
     }
   };
 
   // Handle reject leave request
-  const handleRejectLeave = (record: LeaveRecord) => {
-    try {
-      const updatedRecords = leaveRecords.map((r) =>
-        r.id === record.id ? { ...r, status: "Rejected" } : r
-      );
-
-      // Save to localStorage
-      saveLeaveRecordsToStorage(updatedRecords);
-
-      // Update state to trigger re-render
-      setLeaveRecords(updatedRecords);
-
-      // Show success toast
+  const handleRejectLeave = async (record: ReturnType<typeof transformLeaveRequest>) => {
+    const result = await rejectLeaveRequest(parseInt(record.id), "Rejected by manager");
+    if (result) {
       toast.success("Leave Request Rejected", {
-        description: `Leave request ${record.id} for ${record.employee} has been rejected.`,
+        description: `Leave request for ${record.employee} has been rejected.`,
         duration: 3000,
       });
-
-      console.log("Leave request rejected:", record.id);
-    } catch (error) {
-      console.error("Error rejecting leave request:", error);
-      // Show error toast
+    } else {
       toast.error("Failed to Reject Leave Request", {
-        description:
-          "An error occurred while rejecting the leave request. Please try again.",
+        description: "An error occurred while rejecting the leave request.",
         duration: 4000,
       });
     }
   };
 
   // Table action items
-  const leaveActions: ActionItem<LeaveRecord>[] = [
+  const leaveActions: ActionItem<ReturnType<typeof transformLeaveRequest>>[] = [
     {
       label: "View",
       icon: Eye,
       onClick: (record) => {
         console.log("View leave:", record);
-        // Handle view action
       },
     },
     {
@@ -544,7 +333,6 @@ export function LeaveTab() {
       icon: Edit,
       onClick: (record) => {
         console.log("Edit leave:", record);
-        // Handle edit action
       },
     },
     {
@@ -589,15 +377,21 @@ export function LeaveTab() {
         ))}
       </div>
       <div className="w-full">
-        <AppTable
-          data={leaveRecords}
-          columns={leaveColumns}
-          actions={leaveActions}
-          itemsPerPage={5}
-          caption="Leave Management Records"
-          minWidth="800px"
-          getRowId={(row) => row.id}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Loading leave requests...</p>
+          </div>
+        ) : (
+          <AppTable
+            data={leaveRecords}
+            columns={leaveColumns}
+            actions={leaveActions}
+            itemsPerPage={5}
+            caption="Leave Management Records"
+            minWidth="800px"
+            getRowId={(row) => row.id}
+          />
+        )}
       </div>
       <div className="w-full rounded-3xl p-4">
         <h1 className="text-base font-semibold mb-4">Leave Balance Summary</h1>
@@ -615,13 +409,20 @@ export function LeaveTab() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-destructive/15 text-destructive border border-destructive/50 rounded-md p-4">
+          {error}
+        </div>
+      )}
+
       {/* Leave Request Dialog */}
       <LeaveRequestDialog
         open={isLeaveRequestOpen}
         onOpenChange={setIsLeaveRequestOpen}
         title="File Leave Request"
         onSubmit={handleLeaveRequestSubmit}
-        employees={uniqueEmployees}
+        employees={employeeOptions.map((e) => e.name)}
+        leaveTypes={leaveTypes.map((lt) => lt.name)}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { LeaveTab } from "./leave";
 import { PayrollTab } from "./payroll";
 import { BenefitsTab } from "./benefits";
 import { PerformanceTab } from "./performance";
+import { HolidaysTab } from "./holidays";
 
 export function HrisPage() {
   const tabs = [
@@ -41,6 +42,11 @@ export function HrisPage() {
       content: <PayrollTab />,
     },
     {
+      value: "holidays",
+      label: "Holidays",
+      content: <HolidaysTab />,
+    },
+    {
       value: "benefits",
       label: "Benefits",
       content: <BenefitsTab />,
@@ -58,7 +64,7 @@ export function HrisPage() {
         className="mt-4"
         tabs={tabs}
         defaultValue="employees"
-        tabsListClassName="sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-8"
+        tabsListClassName="sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-9"
       />
     </div>
   );

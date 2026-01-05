@@ -16,6 +16,19 @@ use App\Http\Controllers\Api\ReceivableInvoiceController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PurchaseOrderController;
+use App\Http\Controllers\Api\EmploymentTypeController;
+use App\Http\Controllers\Api\HolidayController;
+use App\Http\Controllers\Api\LeaveTypeController;
+use App\Http\Controllers\Api\LeaveRequestController;
+use App\Http\Controllers\Api\LeaveBalanceController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\PayrollPeriodController;
+use App\Http\Controllers\Api\PayrollRunController;
+use App\Http\Controllers\Api\PayrollEntryController;
+use App\Http\Controllers\Api\SalaryComponentController;
+use App\Http\Controllers\Api\DeductionController;
+use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Models\User;
 use Illuminate\Http\Request;
 /*
@@ -153,6 +166,107 @@ Route::middleware('rz.auth')->group(function () {
         Route::get('/{id}', [PositionController::class, 'show'])->middleware('permission:hris.view');
         Route::put('/{id}', [PositionController::class, 'update'])->middleware('permission:hris.update');
         Route::delete('/{id}', [PositionController::class, 'destroy'])->middleware('permission:hris.delete');
+    });
+
+    // Employment Type management routes
+    Route::prefix('employment-types')->group(function () {
+        Route::get('/', [EmploymentTypeController::class, 'index'])->middleware('permission:hris.view');
+        Route::post('/', [EmploymentTypeController::class, 'store'])->middleware('permission:hris.create');
+        Route::get('/{id}', [EmploymentTypeController::class, 'show'])->middleware('permission:hris.view');
+        Route::put('/{id}', [EmploymentTypeController::class, 'update'])->middleware('permission:hris.update');
+        Route::delete('/{id}', [EmploymentTypeController::class, 'destroy'])->middleware('permission:hris.delete');
+    });
+
+    // Holiday management routes
+    Route::prefix('holidays')->group(function () {
+        Route::get('/', [HolidayController::class, 'index'])->middleware('permission:hris.view');
+        Route::post('/', [HolidayController::class, 'store'])->middleware('permission:hris.create');
+        Route::get('/{id}', [HolidayController::class, 'show'])->middleware('permission:hris.view');
+        Route::put('/{id}', [HolidayController::class, 'update'])->middleware('permission:hris.update');
+        Route::delete('/{id}', [HolidayController::class, 'destroy'])->middleware('permission:hris.delete');
+    });
+
+    // Leave Type management routes
+    Route::prefix('leave-types')->group(function () {
+        Route::get('/', [LeaveTypeController::class, 'index'])->middleware('permission:hris.view');
+        Route::post('/', [LeaveTypeController::class, 'store'])->middleware('permission:hris.create');
+        Route::get('/{id}', [LeaveTypeController::class, 'show'])->middleware('permission:hris.view');
+        Route::put('/{id}', [LeaveTypeController::class, 'update'])->middleware('permission:hris.update');
+        Route::delete('/{id}', [LeaveTypeController::class, 'destroy'])->middleware('permission:hris.delete');
+    });
+
+    // Leave Request management routes
+    Route::prefix('leave-requests')->group(function () {
+        Route::get('/', [LeaveRequestController::class, 'index'])->middleware('permission:hris.view');
+        Route::post('/', [LeaveRequestController::class, 'store'])->middleware('permission:hris.create');
+        Route::post('/{id}/approve', [LeaveRequestController::class, 'approve'])->middleware('permission:hris.approve');
+        Route::post('/{id}/reject', [LeaveRequestController::class, 'reject'])->middleware('permission:hris.reject');
+    });
+
+    // Leave Balance routes
+    Route::prefix('leave-balances')->group(function () {
+        Route::get('/', [LeaveBalanceController::class, 'index'])->middleware('permission:hris.view');
+    });
+
+    // Attendance management routes
+    Route::prefix('attendances')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->middleware('permission:hris.view');
+        Route::post('/time-in', [AttendanceController::class, 'timeIn'])->middleware('permission:hris.create');
+        Route::post('/{id}/time-out', [AttendanceController::class, 'timeOut'])->middleware('permission:hris.update');
+    });
+
+    // Payroll Period management routes
+    Route::prefix('payroll-periods')->group(function () {
+        Route::get('/', [PayrollPeriodController::class, 'index'])->middleware('permission:payroll.view');
+        Route::post('/', [PayrollPeriodController::class, 'store'])->middleware('permission:payroll.create');
+    });
+
+    // Payroll Run management routes
+    Route::prefix('payroll-runs')->group(function () {
+        Route::get('/', [PayrollRunController::class, 'index'])->middleware('permission:payroll.view');
+        Route::post('/', [PayrollRunController::class, 'store'])->middleware('permission:payroll.create');
+        Route::post('/{id}/process', [PayrollRunController::class, 'process'])->middleware('permission:payroll.process');
+        Route::post('/{id}/approve', [PayrollRunController::class, 'approve'])->middleware('permission:payroll.approve');
+        Route::get('/{id}/entries', [PayrollRunController::class, 'entries'])->middleware('permission:payroll.view');
+    });
+
+    // Payroll Entry routes
+    Route::prefix('payroll-entries')->group(function () {
+        Route::get('/', [PayrollEntryController::class, 'index'])->middleware('permission:payroll.view');
+    });
+
+    // Salary Component management routes
+    Route::prefix('salary-components')->group(function () {
+        Route::get('/', [SalaryComponentController::class, 'index'])->middleware('permission:payroll.view');
+        Route::post('/', [SalaryComponentController::class, 'store'])->middleware('permission:payroll.create');
+        Route::put('/{id}', [SalaryComponentController::class, 'update'])->middleware('permission:payroll.update');
+        Route::delete('/{id}', [SalaryComponentController::class, 'destroy'])->middleware('permission:payroll.delete');
+    });
+
+    // Deduction management routes
+    Route::prefix('deductions')->group(function () {
+        Route::get('/', [DeductionController::class, 'index'])->middleware('permission:payroll.view');
+        Route::post('/', [DeductionController::class, 'store'])->middleware('permission:payroll.create');
+        Route::put('/{id}', [DeductionController::class, 'update'])->middleware('permission:payroll.update');
+        Route::delete('/{id}', [DeductionController::class, 'destroy'])->middleware('permission:payroll.delete');
+    });
+
+    // Settings management routes
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingController::class, 'index'])->middleware('permission:settings.view');
+        Route::get('/{key}', [SettingController::class, 'show'])->middleware('permission:settings.view');
+        Route::post('/', [SettingController::class, 'store'])->middleware('permission:settings.update');
+        Route::put('/{key}', [SettingController::class, 'update'])->middleware('permission:settings.update');
+        Route::delete('/{key}', [SettingController::class, 'destroy'])->middleware('permission:settings.update');
+    });
+
+    // Notification routes
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->middleware('permission:notifications.view');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->middleware('permission:notifications.view');
+        Route::post('/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->middleware('permission:notifications.update');
+        Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->middleware('permission:notifications.update');
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->middleware('permission:notifications.delete');
     });
 
     // Account management routes with permission checks

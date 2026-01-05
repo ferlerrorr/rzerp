@@ -882,3 +882,362 @@ export async function deletePurchaseOrder(id: number) {
   const response = await api.delete(`/api/purchase-orders/${id}`);
   return response.data;
 }
+
+// ============================================================================
+// Holiday API Functions
+// ============================================================================
+
+export async function getHolidays(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.type) params.type = filters.type;
+  if (filters?.is_active !== undefined) params.is_active = filters.is_active;
+  if (filters?.year) params.year = filters.year;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/holidays", { params });
+  return response.data;
+}
+
+export async function getHoliday(id: number) {
+  const response = await api.get(`/api/holidays/${id}`);
+  return response.data;
+}
+
+export async function createHoliday(data: Record<string, any>) {
+  const response = await api.post("/api/holidays", data);
+  return response.data;
+}
+
+export async function updateHoliday(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/holidays/${id}`, data);
+  return response.data;
+}
+
+export async function deleteHoliday(id: number) {
+  const response = await api.delete(`/api/holidays/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Leave Type API Functions
+// ============================================================================
+
+export async function getLeaveTypes(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (filters?.is_active !== undefined) params.is_active = filters.is_active;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/leave-types", { params });
+  return response.data;
+}
+
+export async function getLeaveType(id: number) {
+  const response = await api.get(`/api/leave-types/${id}`);
+  return response.data;
+}
+
+export async function createLeaveType(data: Record<string, any>) {
+  const response = await api.post("/api/leave-types", data);
+  return response.data;
+}
+
+export async function updateLeaveType(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/leave-types/${id}`, data);
+  return response.data;
+}
+
+export async function deleteLeaveType(id: number) {
+  const response = await api.delete(`/api/leave-types/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Leave Request API Functions
+// ============================================================================
+
+export async function getLeaveRequests(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.employee_id) params.employee_id = filters.employee_id;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.leave_type_id) params.leave_type_id = filters.leave_type_id;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/leave-requests", { params });
+  return response.data;
+}
+
+export async function createLeaveRequest(data: Record<string, any>) {
+  const response = await api.post("/api/leave-requests", data);
+  return response.data;
+}
+
+export async function approveLeaveRequest(id: number) {
+  const response = await api.post(`/api/leave-requests/${id}/approve`);
+  return response.data;
+}
+
+export async function rejectLeaveRequest(id: number, reason: string) {
+  const response = await api.post(`/api/leave-requests/${id}/reject`, { reason });
+  return response.data;
+}
+
+// ============================================================================
+// Leave Balance API Functions
+// ============================================================================
+
+export async function getLeaveBalances(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.employee_id) params.employee_id = filters.employee_id;
+  if (filters?.year) params.year = filters.year;
+  const response = await api.get("/api/leave-balances", { params });
+  return response.data;
+}
+
+// ============================================================================
+// Attendance API Functions
+// ============================================================================
+
+export async function getAttendances(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.employee_id) params.employee_id = filters.employee_id;
+  if (filters?.date) params.date = filters.date;
+  if (filters?.start_date) params.start_date = filters.start_date;
+  if (filters?.end_date) params.end_date = filters.end_date;
+  if (filters?.status) params.status = filters.status;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/attendances", { params });
+  return response.data;
+}
+
+export async function timeIn(data: Record<string, any>) {
+  const response = await api.post("/api/attendances/time-in", data);
+  return response.data;
+}
+
+export async function timeOut(id: number, data: Record<string, any>) {
+  const response = await api.post(`/api/attendances/${id}/time-out`, data);
+  return response.data;
+}
+
+// ============================================================================
+// Payroll Period API Functions
+// ============================================================================
+
+export async function getPayrollPeriods(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.status) params.status = filters.status;
+  if (filters?.type) params.type = filters.type;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/payroll-periods", { params });
+  return response.data;
+}
+
+export async function createPayrollPeriod(data: Record<string, any>) {
+  const response = await api.post("/api/payroll-periods", data);
+  return response.data;
+}
+
+// ============================================================================
+// Payroll Run API Functions
+// ============================================================================
+
+export async function getPayrollRuns(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.payroll_period_id) params.payroll_period_id = filters.payroll_period_id;
+  if (filters?.status) params.status = filters.status;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/payroll-runs", { params });
+  return response.data;
+}
+
+export async function createPayrollRun(data: Record<string, any>) {
+  const response = await api.post("/api/payroll-runs", data);
+  return response.data;
+}
+
+export async function processPayrollRun(id: number) {
+  const response = await api.post(`/api/payroll-runs/${id}/process`);
+  return response.data;
+}
+
+export async function approvePayrollRun(id: number) {
+  const response = await api.post(`/api/payroll-runs/${id}/approve`);
+  return response.data;
+}
+
+export async function getPayrollRunEntries(id: number) {
+  const response = await api.get(`/api/payroll-runs/${id}/entries`);
+  return response.data;
+}
+
+// ============================================================================
+// Payroll Entry API Functions
+// ============================================================================
+
+export async function getPayrollEntries(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.payroll_run_id) params.payroll_run_id = filters.payroll_run_id;
+  const response = await api.get("/api/payroll-entries", { params });
+  return response.data;
+}
+
+// ============================================================================
+// Salary Component API Functions
+// ============================================================================
+
+export async function getSalaryComponents(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.employee_id) params.employee_id = filters.employee_id;
+  const response = await api.get("/api/salary-components", { params });
+  return response.data;
+}
+
+export async function createSalaryComponent(data: Record<string, any>) {
+  const response = await api.post("/api/salary-components", data);
+  return response.data;
+}
+
+export async function updateSalaryComponent(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/salary-components/${id}`, data);
+  return response.data;
+}
+
+export async function deleteSalaryComponent(id: number) {
+  const response = await api.delete(`/api/salary-components/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Deduction API Functions
+// ============================================================================
+
+export async function getDeductions(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.employee_id) params.employee_id = filters.employee_id;
+  const response = await api.get("/api/deductions", { params });
+  return response.data;
+}
+
+export async function createDeduction(data: Record<string, any>) {
+  const response = await api.post("/api/deductions", data);
+  return response.data;
+}
+
+export async function updateDeduction(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/deductions/${id}`, data);
+  return response.data;
+}
+
+export async function deleteDeduction(id: number) {
+  const response = await api.delete(`/api/deductions/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Setting API Functions
+// ============================================================================
+
+export async function getSettings() {
+  const response = await api.get("/api/settings");
+  return response.data;
+}
+
+export async function getSetting(key: string) {
+  const response = await api.get(`/api/settings/${key}`);
+  return response.data;
+}
+
+export async function setSetting(data: Record<string, any>) {
+  const response = await api.post("/api/settings", data);
+  return response.data;
+}
+
+export async function updateSetting(key: string, data: Record<string, any>) {
+  const response = await api.put(`/api/settings/${key}`, data);
+  return response.data;
+}
+
+export async function deleteSetting(key: string) {
+  const response = await api.delete(`/api/settings/${key}`);
+  return response.data;
+}
+
+// ============================================================================
+// Notification API Functions
+// ============================================================================
+
+export async function getNotifications(filters?: Record<string, any>) {
+  const params: Record<string, string | number | boolean> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.is_read !== undefined) params.is_read = filters.is_read;
+  if (filters?.type) params.type = filters.type;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/notifications", { params });
+  return response.data;
+}
+
+export async function getUnreadNotificationCount() {
+  const response = await api.get("/api/notifications/unread-count");
+  return response.data;
+}
+
+export async function markNotificationAsRead(id: number) {
+  const response = await api.post(`/api/notifications/${id}/mark-as-read`);
+  return response.data;
+}
+
+export async function markAllNotificationsAsRead() {
+  const response = await api.post("/api/notifications/mark-all-as-read");
+  return response.data;
+}
+
+export async function deleteNotification(id: number) {
+  const response = await api.delete(`/api/notifications/${id}`);
+  return response.data;
+}
+
+// ============================================================================
+// Employment Type API Functions
+// ============================================================================
+
+export async function getEmploymentTypes(filters?: Record<string, any>) {
+  const params: Record<string, string | number> = {};
+  if (filters?.per_page) params.per_page = filters.per_page;
+  if (filters?.page) params.page = filters.page;
+  if (filters?.search) params.search = filters.search;
+  if (!params.per_page) params.per_page = 15;
+  const response = await api.get("/api/employment-types", { params });
+  return response.data;
+}
+
+export async function getEmploymentType(id: number) {
+  const response = await api.get(`/api/employment-types/${id}`);
+  return response.data;
+}
+
+export async function createEmploymentType(data: Record<string, any>) {
+  const response = await api.post("/api/employment-types", data);
+  return response.data;
+}
+
+export async function updateEmploymentType(id: number, data: Record<string, any>) {
+  const response = await api.put(`/api/employment-types/${id}`, data);
+  return response.data;
+}
+
+export async function deleteEmploymentType(id: number) {
+  const response = await api.delete(`/api/employment-types/${id}`);
+  return response.data;
+}
