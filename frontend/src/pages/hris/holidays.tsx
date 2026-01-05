@@ -77,17 +77,14 @@ export function HolidaysTab() {
     error,
     fetchHolidays,
     getHoliday,
-    createHoliday,
-    updateHoliday,
     deleteHoliday,
     setFilters,
-    clearFilters,
   } = useHolidayStore();
   const { query: searchQuery } = useSearchStore();
   const [isAddHolidayOpen, setIsAddHolidayOpen] = useState(false);
-  const [isEditHolidayOpen, setIsEditHolidayOpen] = useState(false);
+  const [_isEditHolidayOpen, setIsEditHolidayOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingHolidayId, setEditingHolidayId] = useState<number | undefined>();
+  const [_editingHolidayId, setEditingHolidayId] = useState<number | undefined>();
   const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
 
   // Fetch holidays on mount and when search changes
@@ -119,34 +116,22 @@ export function HolidaysTab() {
     );
   }, [holidays, searchQuery]);
 
-  // Handle holiday creation submission
-  const handleHolidaySubmit = async (data: Record<string, any>) => {
-    try {
-      const newHoliday = await createHoliday(data);
-
-      if (newHoliday) {
-        toast.success("Holiday Created Successfully", {
-          description: `${newHoliday.name} has been created.`,
-          duration: 3000,
-        });
-        setIsAddHolidayOpen(false);
-      } else {
-        if (error && !error.includes("validation")) {
-          toast.error("Failed to Create Holiday", {
-            description: error,
-            duration: 4000,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Error creating holiday:", err);
-      toast.error("Failed to Create Holiday", {
-        description:
-          "An error occurred while creating the holiday. Please try again.",
-        duration: 4000,
-      });
-    }
-  };
+  // Handle holiday creation submission (for future dialog implementation)
+  // TODO: Implement when dialog is created
+  // const handleHolidaySubmit = async (data: Record<string, any>) => {
+  //   try {
+  //     const newHoliday = await createHoliday(data);
+  //     if (newHoliday) {
+  //       toast.success("Holiday Created Successfully", {
+  //         description: `${newHoliday.name} has been created.`,
+  //         duration: 3000,
+  //       });
+  //       setIsAddHolidayOpen(false);
+  //     }
+  //   } catch (err) {
+  //     console.error("Error creating holiday:", err);
+  //   }
+  // };
 
   // Handle edit holiday
   const handleEditHoliday = async (holiday: Holiday) => {
@@ -170,38 +155,29 @@ export function HolidaysTab() {
     }
   };
 
-  // Handle holiday update submission
-  const handleHolidayUpdate = async (data: Record<string, any>) => {
-    if (!editingHolidayId) return;
-
-    try {
-      const updatedHoliday = await updateHoliday(editingHolidayId, data);
-
-      if (updatedHoliday) {
-        toast.success("Holiday Updated Successfully", {
-          description: `${updatedHoliday.name} has been updated.`,
-          duration: 3000,
-        });
-        setIsEditHolidayOpen(false);
-        setEditingHolidayId(undefined);
-        await fetchHolidays();
-      } else {
-        if (error && !error.includes("validation")) {
-          toast.error("Failed to Update Holiday", {
-            description: error,
-            duration: 4000,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Error updating holiday:", err);
-      toast.error("Failed to Update Holiday", {
-        description:
-          "An error occurred while updating the holiday. Please try again.",
-        duration: 4000,
-      });
-    }
-  };
+  // Handle holiday update submission (for future dialog implementation)
+  // TODO: Implement when dialog is created
+  // const handleHolidayUpdate = async (data: Record<string, any>) => {
+  //   if (!editingHolidayId) return;
+  //   try {
+  //     const updatedHoliday = await updateHoliday(editingHolidayId, data);
+  //     if (updatedHoliday) {
+  //       toast.success("Holiday Updated Successfully", {
+  //         description: `${updatedHoliday.name} has been updated.`,
+  //         duration: 3000,
+  //       });
+  //       setIsEditHolidayOpen(false);
+  //       setEditingHolidayId(undefined);
+  //       await fetchHolidays();
+  //     }
+  //   } catch (err) {
+  //     console.error("Error updating holiday:", err);
+  //     toast.error("Failed to Update Holiday", {
+  //       description: "An error occurred while updating the holiday.",
+  //       duration: 4000,
+  //     });
+  //   }
+  // };
 
   // Handle delete button click
   const handleDeleteClick = (holiday: Holiday) => {

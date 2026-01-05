@@ -27,9 +27,9 @@ class CheckPermission
             ], 401);
         }
 
-        // Super admin bypass
+        // Super admin and admin bypass
         $roles = is_array($user->roles) ? $user->roles : [];
-        if (in_array('super-admin', $roles)) {
+        if (in_array('super-admin', $roles) || in_array('admin', $roles)) {
             return $next($request);
         }
 

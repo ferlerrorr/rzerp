@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('total_deductions', 15, 2)->default(0);
             $table->decimal('total_net', 15, 2)->default(0);
             $table->integer('employee_count')->default(0);
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->unsignedBigInteger('approved_by')->nullable()->index(); // References user ID from RZ Auth service
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();

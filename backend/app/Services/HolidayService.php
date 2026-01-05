@@ -177,13 +177,11 @@ class HolidayService
     {
         return [
             'id' => $holiday->id,
-            'date' => $holiday->date,
             'name' => $holiday->name,
-            'description' => $holiday->description,
-            'type' => $holiday->type,
-            'is_active' => $holiday->is_active,
-            'created_at' => $holiday->created_at,
-            'updated_at' => $holiday->updated_at,
+            'date' => $holiday->date ? $holiday->date->format('Y-m-d') : null,
+            'type' => $holiday->type ?? 'regular',
+            'created_at' => $holiday->created_at ? $holiday->created_at->toDateTimeString() : null,
+            'updated_at' => $holiday->updated_at ? $holiday->updated_at->toDateTimeString() : null,
         ];
     }
 }

@@ -175,30 +175,8 @@ class UserController extends Controller
             ], 401);
         }
 
-        // Ensure we have a User model instance with roles and permissions
-        if ($user instanceof User) {
-            $user->load('roles');
-            $roleIds = $user->roles->pluck('id')->toArray();
-            $permissions = empty($roleIds) ? [] : User::permissionQuery()
-                ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-                ->whereIn('role_permission.role_id', $roleIds)
-                ->distinct()
-                ->pluck('permissions.name')
-                ->toArray();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'roles' => $user->roles->pluck('name')->toArray(),
-                    'permissions' => $permissions,
-                ],
-            ]);
-        }
-
-        // Fallback for anonymous user objects from middleware
+        // User data comes from RZ Auth service via middleware (anonymous object)
+        // No need to check for User model instance since users table doesn't exist
         return response()->json([
             'success' => true,
             'data' => [

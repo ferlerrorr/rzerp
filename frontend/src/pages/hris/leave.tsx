@@ -19,6 +19,7 @@ import { LeaveRequestDialog } from "@/components/dialogs/leave-request-dialog";
 import {
   useLeaveRequestStore,
   LeaveRequestFormData,
+  LeaveRequestDialogFormData,
   LeaveRequestFromAPI,
   LeaveBalanceFromAPI,
 } from "@/stores/leave";
@@ -239,7 +240,7 @@ export function LeaveTab() {
   }, [leaveBalances]);
 
   // Handle leave request submission
-  const handleLeaveRequestSubmit = async (data: LeaveRequestFormData) => {
+  const handleLeaveRequestSubmit = async (data: LeaveRequestDialogFormData) => {
     // Transform form data to API format
     // Find employee ID from name
     const employee = employees.find(
@@ -264,12 +265,12 @@ export function LeaveTab() {
       return;
     }
 
-    const apiData = {
-      employee_id: parseInt(employee.id),
+    const apiData: LeaveRequestFormData = {
+      employee_id: Number(employee.id),
       leave_type_id: leaveType.id,
       start_date: data.startDate,
       end_date: data.endDate,
-      reason: data.reason || null,
+      reason: data.reason || undefined,
     };
 
     const result = await createLeaveRequest(apiData);

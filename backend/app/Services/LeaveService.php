@@ -53,7 +53,7 @@ class LeaveService
      */
     public function getLeaveRequests(array $filters = []): array
     {
-        $query = LeaveRequest::with(['employee', 'leaveType', 'approver']);
+        $query = LeaveRequest::with(['employee', 'leaveType']);
 
         if (isset($filters['employee_id'])) {
             $query->where('employee_id', $filters['employee_id']);
@@ -348,7 +348,7 @@ class LeaveService
     {
         return [
             'id' => $leaveRequest->id,
-            'code' => $leaveRequest->code,
+            'code' => $leaveRequest->code ?? '',
             'employee_id' => $leaveRequest->employee_id,
             'employee' => $leaveRequest->employee ? [
                 'id' => $leaveRequest->employee->id,
@@ -359,16 +359,16 @@ class LeaveService
                 'id' => $leaveRequest->leaveType->id,
                 'name' => $leaveRequest->leaveType->name,
             ] : null,
-            'start_date' => $leaveRequest->start_date,
-            'end_date' => $leaveRequest->end_date,
-            'total_days' => $leaveRequest->total_days,
+            'start_date' => $leaveRequest->start_date ? $leaveRequest->start_date->format('Y-m-d') : null,
+            'end_date' => $leaveRequest->end_date ? $leaveRequest->end_date->format('Y-m-d') : null,
+            'total_days' => (float) ($leaveRequest->total_days ?? 0),
             'reason' => $leaveRequest->reason,
-            'status' => $leaveRequest->status,
+            'status' => $leaveRequest->status ?? 'pending',
             'approved_by' => $leaveRequest->approved_by,
-            'approved_at' => $leaveRequest->approved_at,
+            'approved_at' => $leaveRequest->approved_at ? $leaveRequest->approved_at->toDateTimeString() : null,
             'rejection_reason' => $leaveRequest->rejection_reason,
-            'created_at' => $leaveRequest->created_at,
-            'updated_at' => $leaveRequest->updated_at,
+            'created_at' => $leaveRequest->created_at ? $leaveRequest->created_at->toDateTimeString() : null,
+            'updated_at' => $leaveRequest->updated_at ? $leaveRequest->updated_at->toDateTimeString() : null,
         ];
     }
 
@@ -505,13 +505,13 @@ class LeaveService
             'id' => $leaveType->id,
             'name' => $leaveType->name,
             'description' => $leaveType->description,
-            'max_days_per_year' => $leaveType->max_days_per_year,
-            'is_paid' => $leaveType->is_paid,
-            'allows_carry_over' => $leaveType->allows_carry_over,
+            'max_days_per_year' => (int) ($leaveType->max_days_per_year ?? 0),
+            'is_paid' => $leaveType->is_paid ?? true,
+            'allows_carry_over' => $leaveType->allows_carry_over ?? false,
             'max_carry_over_days' => $leaveType->max_carry_over_days,
-            'is_active' => $leaveType->is_active,
-            'created_at' => $leaveType->created_at,
-            'updated_at' => $leaveType->updated_at,
+            'is_active' => $leaveType->is_active ?? true,
+            'created_at' => $leaveType->created_at ? $leaveType->created_at->toDateTimeString() : null,
+            'updated_at' => $leaveType->updated_at ? $leaveType->updated_at->toDateTimeString() : null,
         ];
     }
 

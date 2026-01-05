@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,13 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useLeaveRequestStore, LeaveRequestFormData } from "@/stores/leave";
+import { useLeaveRequestStore, LeaveRequestDialogFormData } from "@/stores/leave";
 
 export interface LeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
-  onSubmit?: (data: LeaveRequestFormData) => void;
+  onSubmit?: (data: LeaveRequestDialogFormData) => void;
   employees?: string[];
   leaveTypes?: string[];
 }
@@ -47,28 +47,58 @@ export function LeaveRequestDialog({
   employees = [],
   leaveTypes = defaultLeaveTypes,
 }: LeaveRequestDialogProps) {
-  const {
-    formData,
-    errors,
-    updateField,
-    setIsOpen,
-    validateForm,
-    resetForm,
-  } = useLeaveRequestStore();
+  const [localFormData, setLocalFormData] = useState<LeaveRequestDialogFormData>({
+    employeeName: "",
+    leaveType: "",
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
+  const [localErrors, setLocalErrors] = useState<Partial<Record<keyof LeaveRequestDialogFormData, string>>>({});
+
+  const { setIsOpen } = useLeaveRequestStore();
 
   // Sync dialog open state with store
   useEffect(() => {
     setIsOpen(open);
   }, [open, setIsOpen]);
 
-  const handleChange = (field: keyof LeaveRequestFormData, value: string) => {
-    updateField(field, value);
+  const handleChange = (field: keyof LeaveRequestDialogFormData, value: string) => {
+    setLocalFormData((prev) => ({ ...prev, [field]: value }));
+    if (localErrors[field]) {
+      setLocalErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Partial<Record<keyof LeaveRequestDialogFormData, string>> = {};
+    if (!localFormData.employeeName) errors.employeeName = "Employee name is required";
+    if (!localFormData.leaveType) errors.leaveType = "Leave type is required";
+    if (!localFormData.startDate) errors.startDate = "Start date is required";
+    if (!localFormData.endDate) errors.endDate = "End date is required";
+    if (!localFormData.reason) errors.reason = "Reason is required";
+    if (localFormData.startDate && localFormData.endDate && localFormData.startDate > localFormData.endDate) {
+      errors.endDate = "End date must be after start date";
+    }
+    setLocalErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const resetForm = () => {
+    setLocalFormData({
+      employeeName: "",
+      leaveType: "",
+      startDate: "",
+      endDate: "",
+      reason: "",
+    });
+    setLocalErrors({});
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit?.(formData);
+      onSubmit?.(localFormData);
       onOpenChange(false);
       resetForm();
     }
@@ -95,14 +125,14 @@ export function LeaveRequestDialog({
               </Label>
               {employees.length > 0 ? (
                 <Select
-                  value={formData.employeeName}
+                  value={localFormData.employeeName}
                   onValueChange={(value) =>
                     handleChange("employeeName", value)
                   }
                 >
                   <SelectTrigger
                     className={
-                      errors.employeeName ? "border-destructive" : ""
+                      localErrors.employeeName ? "border-destructive" : ""
                     }
                   >
                     <SelectValue placeholder="Select Employee" />
@@ -118,17 +148,17 @@ export function LeaveRequestDialog({
               ) : (
                 <Input
                   id="employeeName"
-                  value={formData.employeeName}
+                  value={localFormData.employeeName}
                   onChange={(e) =>
                     handleChange("employeeName", e.target.value)
                   }
-                  className={errors.employeeName ? "border-destructive" : ""}
+                  className={localErrors.employeeName ? "border-destructive" : ""}
                   placeholder="Enter employee name"
                 />
               )}
-              {errors.employeeName && (
+              {localErrors.employeeName && (
                 <p className="text-xs text-destructive">
-                  {errors.employeeName}
+                  {localErrors.employeeName}
                 </p>
               )}
             </div>
@@ -139,11 +169,11 @@ export function LeaveRequestDialog({
                 Leave Type <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={formData.leaveType}
+                value={localFormData.leaveType}
                 onValueChange={(value) => handleChange("leaveType", value)}
               >
                 <SelectTrigger
-                  className={errors.leaveType ? "border-destructive" : ""}
+                  className={localErrors.leaveType ? "border-destructive" : ""}
                 >
                   <SelectValue placeholder="Select Leave Type" />
                 </SelectTrigger>
@@ -155,8 +185,8 @@ export function LeaveRequestDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.leaveType && (
-                <p className="text-xs text-destructive">{errors.leaveType}</p>
+              {localErrors.leaveType && (
+                <p className="text-xs text-destructive">{localErrors.leaveType}</p>
               )}
             </div>
 
@@ -169,13 +199,13 @@ export function LeaveRequestDialog({
                 <Input
                   id="startDate"
                   type="date"
-                  value={formData.startDate}
+                  value={localFormData.startDate}
                   onChange={(e) => handleChange("startDate", e.target.value)}
-                  className={errors.startDate ? "border-destructive" : ""}
+                  className={localErrors.startDate ? "border-destructive" : ""}
                 />
-                {errors.startDate && (
+                {localErrors.startDate && (
                   <p className="text-xs text-destructive">
-                    {errors.startDate}
+                    {localErrors.startDate}
                   </p>
                 )}
               </div>
@@ -186,13 +216,13 @@ export function LeaveRequestDialog({
                 <Input
                   id="endDate"
                   type="date"
-                  value={formData.endDate}
+                  value={localFormData.endDate}
                   onChange={(e) => handleChange("endDate", e.target.value)}
-                  className={errors.endDate ? "border-destructive" : ""}
-                  min={formData.startDate || undefined}
+                  className={localErrors.endDate ? "border-destructive" : ""}
+                  min={localFormData.startDate || undefined}
                 />
-                {errors.endDate && (
-                  <p className="text-xs text-destructive">{errors.endDate}</p>
+                {localErrors.endDate && (
+                  <p className="text-xs text-destructive">{localErrors.endDate}</p>
                 )}
               </div>
             </div>
@@ -204,14 +234,14 @@ export function LeaveRequestDialog({
               </Label>
               <Textarea
                 id="reason"
-                value={formData.reason}
+                value={localFormData.reason}
                 onChange={(e) => handleChange("reason", e.target.value)}
                 placeholder="Please provide a reason for your leave request..."
-                className={errors.reason ? "border-destructive" : ""}
+                className={localErrors.reason ? "border-destructive" : ""}
                 rows={4}
               />
-              {errors.reason && (
-                <p className="text-xs text-destructive">{errors.reason}</p>
+              {localErrors.reason && (
+                <p className="text-xs text-destructive">{localErrors.reason}</p>
               )}
             </div>
           </div>

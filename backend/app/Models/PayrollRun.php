@@ -62,10 +62,10 @@ class PayrollRun extends Model
     }
 
     /**
-     * Get the user who approved this run.
+     * Get approver user ID (from RZ Auth service, not a relationship)
      */
-    public function approver(): BelongsTo
+    public function getApproverId(): ?int
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->approved_by;
     }
 }

@@ -17,6 +17,15 @@ export interface LeaveRequestFormData {
   reason?: string;
 }
 
+// Dialog form data (user-friendly format with names instead of IDs)
+export interface LeaveRequestDialogFormData {
+  employeeName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
 export interface LeaveRequestFromAPI {
   id: number;
   code: string;

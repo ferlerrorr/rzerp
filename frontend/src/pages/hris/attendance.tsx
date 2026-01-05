@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { OverViewCard } from "@/components/card/overViewCard";
 import {
   UserCheck,
@@ -16,7 +16,6 @@ import {
   RevenueChartData,
 } from "@/components/charts/revenueChart";
 import { useAttendanceStore, AttendanceFromAPI } from "@/stores/attendance";
-import { AppButtons } from "@/components/common/app-Buttons";
 import { AppSearch } from "@/components/common/app-Serach";
 import { useSearchStore } from "@/stores/search";
 
@@ -155,45 +154,7 @@ const dtrActions: ActionItem<ReturnType<typeof transformAttendance>>[] = [
   },
 ];
 
-// Attendance chart data
-const attendanceChartData: RevenueChartData[] = [
-  {
-    month: "January",
-    averageAttendance: 85,
-    totalHoursWorked: 765,
-    overtimeHours: 45,
-  },
-  {
-    month: "February",
-    averageAttendance: 88,
-    totalHoursWorked: 792,
-    overtimeHours: 52,
-  },
-  {
-    month: "March",
-    averageAttendance: 82,
-    totalHoursWorked: 738,
-    overtimeHours: 38,
-  },
-  {
-    month: "April",
-    averageAttendance: 90,
-    totalHoursWorked: 810,
-    overtimeHours: 60,
-  },
-  {
-    month: "May",
-    averageAttendance: 87,
-    totalHoursWorked: 783,
-    overtimeHours: 48,
-  },
-  {
-    month: "June",
-    averageAttendance: 89,
-    totalHoursWorked: 801,
-    overtimeHours: 55,
-  },
-];
+// Attendance chart data - using useMemo version instead (see below)
 
 // Attendance chart configuration
 const attendanceChartConfig = {

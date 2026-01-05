@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
@@ -38,10 +37,10 @@ class Notification extends Model
     }
 
     /**
-     * Get the user that owns the notification.
+     * Get user ID (from RZ Auth service, not a relationship)
      */
-    public function user(): BelongsTo
+    public function getUserId(): ?int
     {
-        return $this->belongsTo(User::class);
+        return $this->user_id;
     }
 }

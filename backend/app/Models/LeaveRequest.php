@@ -60,10 +60,10 @@ class LeaveRequest extends Model
     }
 
     /**
-     * Get the user who approved this request.
+     * Get approver user ID (from RZ Auth service, not a relationship)
      */
-    public function approver(): BelongsTo
+    public function getApproverId(): ?int
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->approved_by;
     }
 }

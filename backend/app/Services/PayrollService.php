@@ -58,7 +58,7 @@ class PayrollService
      */
     public function getPayrollRuns(array $filters = []): array
     {
-        $query = PayrollRun::with(['payrollPeriod', 'approver']);
+        $query = PayrollRun::with(['payrollPeriod']);
 
         if (isset($filters['payroll_period_id'])) {
             $query->where('payroll_period_id', $filters['payroll_period_id']);
@@ -596,12 +596,12 @@ class PayrollService
         return [
             'id' => $period->id,
             'name' => $period->name,
-            'start_date' => $period->start_date,
-            'end_date' => $period->end_date,
-            'type' => $period->type,
-            'status' => $period->status,
-            'created_at' => $period->created_at,
-            'updated_at' => $period->updated_at,
+            'start_date' => $period->start_date ? $period->start_date->format('Y-m-d') : null,
+            'end_date' => $period->end_date ? $period->end_date->format('Y-m-d') : null,
+            'type' => $period->type ?? 'monthly',
+            'status' => $period->status ?? 'draft',
+            'created_at' => $period->created_at ? $period->created_at->toDateTimeString() : null,
+            'updated_at' => $period->updated_at ? $period->updated_at->toDateTimeString() : null,
         ];
     }
 
@@ -615,19 +615,19 @@ class PayrollService
     {
         return [
             'id' => $run->id,
-            'code' => $run->code,
+            'code' => $run->code ?? '',
             'payroll_period_id' => $run->payroll_period_id,
             'payroll_period' => $run->payrollPeriod ? $this->formatPayrollPeriod($run->payrollPeriod) : null,
-            'status' => $run->status,
-            'total_gross' => (float) $run->total_gross,
-            'total_deductions' => (float) $run->total_deductions,
-            'total_net' => (float) $run->total_net,
-            'employee_count' => $run->employee_count,
+            'status' => $run->status ?? 'draft',
+            'total_gross' => (float) ($run->total_gross ?? 0),
+            'total_deductions' => (float) ($run->total_deductions ?? 0),
+            'total_net' => (float) ($run->total_net ?? 0),
+            'employee_count' => $run->employee_count ?? 0,
             'approved_by' => $run->approved_by,
-            'approved_at' => $run->approved_at,
-            'processed_at' => $run->processed_at,
-            'created_at' => $run->created_at,
-            'updated_at' => $run->updated_at,
+            'approved_at' => $run->approved_at ? $run->approved_at->toDateTimeString() : null,
+            'processed_at' => $run->processed_at ? $run->processed_at->toDateTimeString() : null,
+            'created_at' => $run->created_at ? $run->created_at->toDateTimeString() : null,
+            'updated_at' => $run->updated_at ? $run->updated_at->toDateTimeString() : null,
         ];
     }
 

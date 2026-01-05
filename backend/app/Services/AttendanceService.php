@@ -290,24 +290,24 @@ class AttendanceService
     {
         return [
             'id' => $attendance->id,
-            'code' => $attendance->code,
+            'code' => $attendance->code ?? '',
             'employee_id' => $attendance->employee_id,
             'employee' => $attendance->employee ? [
                 'id' => $attendance->employee->id,
                 'name' => $attendance->employee->first_name . ' ' . $attendance->employee->last_name,
             ] : null,
-            'date' => $attendance->date,
-            'time_in' => $attendance->time_in,
-            'time_out' => $attendance->time_out,
-            'break_start' => $attendance->break_start,
-            'break_end' => $attendance->break_end,
-            'total_hours' => (float) $attendance->total_hours,
-            'overtime_hours' => (float) $attendance->overtime_hours,
-            'late_minutes' => $attendance->late_minutes,
-            'status' => $attendance->status,
+            'date' => $attendance->date ? $attendance->date->format('Y-m-d') : null,
+            'time_in' => $attendance->time_in ? $attendance->time_in->format('H:i:s') : null,
+            'time_out' => $attendance->time_out ? $attendance->time_out->format('H:i:s') : null,
+            'break_start' => $attendance->break_start ? $attendance->break_start->format('H:i:s') : null,
+            'break_end' => $attendance->break_end ? $attendance->break_end->format('H:i:s') : null,
+            'total_hours' => (float) ($attendance->total_hours ?? 0),
+            'overtime_hours' => (float) ($attendance->overtime_hours ?? 0),
+            'late_minutes' => $attendance->late_minutes ?? 0,
+            'status' => $attendance->status ?? 'absent',
             'notes' => $attendance->notes,
-            'created_at' => $attendance->created_at,
-            'updated_at' => $attendance->updated_at,
+            'created_at' => $attendance->created_at ? $attendance->created_at->toDateTimeString() : null,
+            'updated_at' => $attendance->updated_at ? $attendance->updated_at->toDateTimeString() : null,
         ];
     }
 }

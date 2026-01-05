@@ -414,7 +414,7 @@ class User extends Authenticatable
     {
         $validator = Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255'], // Email uniqueness validated by RZ Auth
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -442,7 +442,7 @@ class User extends Authenticatable
     {
         $validator = Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255'], // Email uniqueness validated by RZ Auth
             'password' => ['required', 'string', 'min:8'],
             'role_ids' => ['sometimes', 'array'],
             'role_ids.*' => ['exists:roles,id'],
@@ -479,11 +479,7 @@ class User extends Authenticatable
             'role_ids.*' => ['exists:roles,id'],
         ];
 
-        if ($userId) {
-            $rules['email'][] = Rule::unique('users')->ignore($userId);
-        } else {
-            $rules['email'][] = 'unique:users';
-        }
+        // Email uniqueness validated by RZ Auth, not needed locally
 
         $validator = Validator::make($data, $rules);
 
@@ -1228,7 +1224,7 @@ class User extends Authenticatable
     public static function validateForgotPassword(array $data): array
     {
         $validator = Validator::make($data, [
-            'email' => ['required', 'email', 'exists:users,email'],
+            'email' => ['required', 'email'], // Email existence validated by RZ Auth
         ]);
 
         if ($validator->fails()) {
@@ -1352,38 +1348,13 @@ class User extends Authenticatable
      */
     public static function verifyEmail(int $userId, string $hash): array
     {
-        $user = self::find($userId);
-
-        if (!$user) {
-            return [
-                'success' => false,
-                'message' => 'User not found',
-            ];
-        }
-
-        if ($user->email_verified_at) {
-            return [
-                'success' => false,
-                'message' => 'Email already verified',
-            ];
-        }
-
-        // Verify hash matches email
-        if (sha1($user->email) !== $hash) {
-            return [
-                'success' => false,
-                'message' => 'Invalid verification link',
-            ];
-        }
-
-        $user->email_verified_at = now();
-        $user->save();
-
-        Log::info("Email verified for user {$user->id}");
+        // Forward email verification to RZ Auth service
+        $result = self::forwardRzAuthRequest('GET', "/api/auth/verify-email/{$userId}/{$hash}");
 
         return [
-            'success' => true,
-            'message' => 'Email verified successfully',
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? ($result['success'] ? 'Email verified successfully' : 'Failed to verify email'),
+            'status' => $result['status'] ?? ($result['success'] ? 200 : 400),
         ];
     }
 

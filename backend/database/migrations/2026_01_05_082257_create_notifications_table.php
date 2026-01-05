@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id')->index(); // References user ID from RZ Auth service
             $table->string('title');
             $table->text('message');
             $table->string('type')->default('info'); // info, success, warning, error

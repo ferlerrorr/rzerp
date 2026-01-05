@@ -35,6 +35,13 @@ class DatabaseSeeder extends Seeder
 
         // Step 5: Create admin user
         $this->createAdminUser();
+
+        // Step 6: Seed HRIS data
+        $this->call([
+            LeaveTypeSeeder::class,
+            HolidaySeeder::class,
+            HrisDataSeeder::class,
+        ]);
     }
 
     /**
@@ -47,9 +54,33 @@ class DatabaseSeeder extends Seeder
             'users.view',
             'users.create',
             'users.update',
-            'uasers.delete',
-            // Email Other Permissions
-           
+            'users.delete',
+            // HRIS permissions
+            'hris.view',
+            'hris.create',
+            'hris.update',
+            'hris.delete',
+            'hris.approve',
+            'hris.reject',
+            // Payroll permissions
+            'payroll.view',
+            'payroll.create',
+            'payroll.update',
+            'payroll.delete',
+            'payroll.process',
+            'payroll.approve',
+            // Finance permissions
+            'finance.view',
+            'finance.create',
+            'finance.update',
+            'finance.delete',
+            // Settings permissions
+            'settings.view',
+            'settings.update',
+            // Notifications permissions
+            'notifications.view',
+            'notifications.update',
+            'notifications.delete',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -142,41 +173,21 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Create admin user with all permissions
+     * Note: User creation is handled by RZ Auth service, not locally
      */
     private function createAdminUser(): void
     {
-        // Find or create the admin user
-        $user = User::firstOrCreate(
-            ['email' => 'admin@socia.com'],
-            [
-                'name' => 'Admin',
-                'email' => 'admin@socia.com',
-                'password' => Hash::make('password'), // Same encryption as user register
-                'email_verified_at' => \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', '2025-12-05 10:14:46'),
-            ]
-        );
-
-        if ($user->wasRecentlyCreated) {
-            $this->command->info("Admin user created: {$user->email}");
-        } else {
-            // Update password and email_verified_at if user already exists
-            $user->password = Hash::make('password');
-            $user->email_verified_at = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', '2025-12-05 10:14:46');
-            $user->save();
-            $this->command->info("Admin user already exists, updated: {$user->email}");
-        }
-
-        // Get admin role
+        // Users are managed by RZ Auth service, not stored locally
+        // Admin user should be created in RZ Auth service
+        $this->command->info("User management is handled by RZ Auth service.");
+        $this->command->info("Please ensure admin user is created in RZ Auth service with admin role.");
+        
+        // Get admin role for reference
         $adminRole = User::roleQuery()->where('name', 'admin')->first();
-
         if ($adminRole) {
-            // Assign admin role to the user
-            $user->roles()->syncWithoutDetaching([$adminRole->id]);
-            $this->command->info("Admin role assigned to user: {$user->email}");
+            $this->command->info("Admin role exists in local database (ID: {$adminRole->id})");
         } else {
-            $this->command->warn("Admin role not found. User created but role not assigned.");
+            $this->command->warn("Admin role not found.");
         }
-
-        $this->command->info("Admin user setup complete!");
     }
 }

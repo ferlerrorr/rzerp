@@ -7,10 +7,10 @@ import { PayrollProcessingDialog } from "@/components/dialogs/payroll-processing
 import {
   usePayrollStore,
   PayrollFormData,
-  PayrollRunFromAPI,
   PayrollEntryFromAPI,
 } from "@/stores/payroll";
-import { Eye, Edit, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Eye, Edit } from "lucide-react";
+import { useEmployeeStore } from "@/stores/employee";
 
 interface PayrollData {
   total_monthly_payroll: string;
@@ -27,14 +27,7 @@ interface PayrollCardConfig {
   countColor: "default" | "green" | "blue" | "black" | "orange";
 }
 
-// Sample data - This would typically come from an API/database
-const payrollData: PayrollData = {
-  total_monthly_payroll: "₱5,234,500",
-  total_deductions: "₱1,250,000",
-  net_payroll: "₱3,984,500",
-  processing_status: "100%",
-  employees_count: "127 employees",
-};
+// Sample data removed - using computed data from payrollRuns instead (see payrollData useMemo below)
 
 // Card configuration - maps to dummy data
 const payrollCardConfig: PayrollCardConfig[] = [
@@ -189,13 +182,10 @@ export function PayrollTab() {
     error,
     fetchPayrollRuns,
     fetchPayrollEntries,
-    createPayrollRun,
-    processPayrollRun,
-    approvePayrollRun,
   } = usePayrollStore();
   const { employees, fetchEmployees } = useEmployeeStore();
   const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
-  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [selectedRunId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPayrollRuns();
@@ -235,7 +225,7 @@ export function PayrollTab() {
 
   // Get employee options for payroll processing
   const employeesForPayroll = useMemo(() => {
-    return employees.map((emp) => ({
+    return employees.map((emp: any) => ({
       id: emp.id.toString(),
       name: `${emp.first_name} ${emp.last_name}`,
       salary: emp.monthly_salary || "0",
@@ -243,7 +233,7 @@ export function PayrollTab() {
   }, [employees]);
 
   // Handle payroll processing submission
-  const handlePayrollSubmit = async (data: PayrollFormData) => {
+  const handlePayrollSubmit = async (_data: PayrollFormData) => {
     // This would create a payroll run - simplified for now
     toast.success("Payroll Processing", {
       description: "Payroll processing initiated.",
