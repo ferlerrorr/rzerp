@@ -35,7 +35,15 @@ class CheckPermission
 
         // Check permission
         $permissions = is_array($user->permissions) ? $user->permissions : [];
-        if (!in_array($permission, $permissions)) {
+        
+        // Handle nested permissions structure
+        $flatPermissions = $permissions;
+        if (!empty($permissions) && (isset($permissions['user_management']) || isset($permissions['hris']))) {
+            // It's nested, extract flat list
+            $flatPermissions = \App\Models\User::extractFlatPermissions($permissions);
+        }
+        
+        if (!in_array($permission, $flatPermissions)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have access to this action.',

@@ -352,6 +352,128 @@ class User extends Authenticatable
     }
 
     /**
+     * Format flat permissions array into nested structure
+     *
+     * @param array<string> $permissions
+     * @return array<string, mixed>
+     */
+    public static function formatPermissions(array $permissions): array
+    {
+        $formatted = [
+            'user_management' => [
+                'roles' => [],
+                'users' => [],
+            ],
+            'hris' => [
+                'leaves' => [],
+                'payroll' => [],
+                'reports' => [],
+                'holidays' => [],
+                'employees' => [],
+                'attendance' => [],
+                'reference_data' => [],
+                'reimbursements' => [],
+            ],
+            'settings' => [
+                'system' => [],
+            ],
+        ];
+
+        foreach ($permissions as $permission) {
+            // User management - roles
+            if (str_starts_with($permission, 'roles.')) {
+                $formatted['user_management']['roles'][] = $permission;
+            }
+            // User management - users
+            elseif (str_starts_with($permission, 'users.')) {
+                $formatted['user_management']['users'][] = $permission;
+            }
+            // HRIS - leaves
+            elseif (str_starts_with($permission, 'leaves.') || str_starts_with($permission, 'leave-types.')) {
+                $formatted['hris']['leaves'][] = $permission;
+            }
+            // HRIS - payroll
+            elseif (str_starts_with($permission, 'payroll.') || 
+                    str_starts_with($permission, 'payroll-periods.') ||
+                    str_starts_with($permission, 'salary-components.') ||
+                    str_starts_with($permission, 'deductions.')) {
+                $formatted['hris']['payroll'][] = $permission;
+            }
+            // HRIS - reports
+            elseif (str_starts_with($permission, 'reports.')) {
+                $formatted['hris']['reports'][] = $permission;
+            }
+            // HRIS - holidays
+            elseif (str_starts_with($permission, 'holidays.')) {
+                $formatted['hris']['holidays'][] = $permission;
+            }
+            // HRIS - employees
+            elseif (str_starts_with($permission, 'employees.')) {
+                $formatted['hris']['employees'][] = $permission;
+            }
+            // HRIS - attendance
+            elseif (str_starts_with($permission, 'attendance.')) {
+                $formatted['hris']['attendance'][] = $permission;
+            }
+            // HRIS - reference_data
+            elseif (str_starts_with($permission, 'departments.') ||
+                    str_starts_with($permission, 'positions.') ||
+                    str_starts_with($permission, 'employment-types.')) {
+                $formatted['hris']['reference_data'][] = $permission;
+            }
+            // HRIS - reimbursements
+            elseif (str_starts_with($permission, 'reimbursements.')) {
+                $formatted['hris']['reimbursements'][] = $permission;
+            }
+            // Settings
+            elseif (str_starts_with($permission, 'settings.')) {
+                $formatted['settings']['system'][] = $permission;
+            }
+        }
+
+        // Remove empty arrays
+        foreach ($formatted as $module => $submodules) {
+            foreach ($submodules as $submodule => $perms) {
+                if (empty($perms)) {
+                    unset($formatted[$module][$submodule]);
+                }
+            }
+            if (empty($formatted[$module])) {
+                unset($formatted[$module]);
+            }
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Extract flat permissions list from nested structure
+     *
+     * @param array<string, mixed> $nestedPermissions
+     * @return array<string>
+     */
+    public static function extractFlatPermissions(array $nestedPermissions): array
+    {
+        $flat = [];
+        
+        foreach ($nestedPermissions as $module => $submodules) {
+            if (is_array($submodules)) {
+                foreach ($submodules as $submodule => $permissions) {
+                    if (is_array($permissions)) {
+                        foreach ($permissions as $permission) {
+                            if (is_string($permission)) {
+                                $flat[] = $permission;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return array_unique($flat);
+    }
+
+    /**
      * Get formatted user data with roles and permissions.
      *
      * @return array<string, mixed>
@@ -372,7 +494,7 @@ class User extends Authenticatable
             'name' => $this->name,
             'email' => $this->email,
             'roles' => $this->roles->pluck('name')->toArray(),
-            'permissions' => $permissions,
+            'permissions' => self::formatPermissions($permissions),
         ];
     }
 

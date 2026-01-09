@@ -177,6 +177,15 @@ class UserController extends Controller
 
         // User data comes from RZ Auth service via middleware (anonymous object)
         // No need to check for User model instance since users table doesn't exist
+        $permissions = is_array($user->permissions ?? null) ? $user->permissions : [];
+        
+        // Format permissions into nested structure if it's a flat array
+        $formattedPermissions = $permissions;
+        if (!empty($permissions) && !isset($permissions['user_management']) && !isset($permissions['hris'])) {
+            // It's a flat array, format it
+            $formattedPermissions = User::formatPermissions($permissions);
+        }
+        
         return response()->json([
             'success' => true,
             'data' => [
@@ -184,7 +193,7 @@ class UserController extends Controller
                 'name' => $user->name ?? '',
                 'email' => $user->email ?? '',
                 'roles' => is_array($user->roles ?? null) ? $user->roles : [],
-                'permissions' => is_array($user->permissions ?? null) ? $user->permissions : [],
+                'permissions' => $formattedPermissions,
             ],
         ]);
     }

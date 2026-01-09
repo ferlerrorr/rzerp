@@ -68,6 +68,19 @@ class RzAuthMiddleware
 
                 public function hasPermission(string $permission): bool
                 {
+                    // Handle nested permissions structure
+                    if (empty($this->permissions)) {
+                        return false;
+                    }
+                    
+                    // Check if permissions is nested structure
+                    if (isset($this->permissions['user_management']) || isset($this->permissions['hris'])) {
+                        // It's nested, extract flat list
+                        $flatPermissions = \App\Models\User::extractFlatPermissions($this->permissions);
+                        return in_array($permission, $flatPermissions);
+                    }
+                    
+                    // It's a flat array
                     return in_array($permission, $this->permissions);
                 }
             };
